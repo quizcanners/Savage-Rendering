@@ -80,7 +80,10 @@ namespace QuizCanners.SpecialEffects
                     IlluminationDecals.s_dynamicAoDecalTargets.Add(this);
 
                 SetDirty();
-                _renderer.enabled = false;
+                if (_renderer)
+                    _renderer.enabled = false;
+                else
+                    Debug.LogError("Renderer not assigned", this);
             }
         }
 
@@ -169,6 +172,8 @@ namespace QuizCanners.SpecialEffects
             if (_meshDataBake.TryGetAttentionMessage(out var msg))
                 return msg;
 
+            if (!_renderer)
+                return "Renderer not assigned";
             if (Shadow < 0.01f && Ambient < 0.01f)
                 return "Values are low, no result will be visible";
 

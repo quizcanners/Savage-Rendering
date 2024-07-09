@@ -100,7 +100,7 @@ namespace QuizCanners.VolumeBakedRendering
                 meshInstance = null;
             }
 
-            if (originalMesh)
+            if (meshFilter && originalMesh)
             {
                 meshFilter.sharedMesh = originalMesh;
             }

@@ -112,7 +112,8 @@ namespace QuizCanners.VolumeBakedRendering
             if (QcScenes.IsAnyLoading)
             {
                 _sceneSetupDoneGate.TryChange(false);
-                VolumeTracingBaker.WaitABit();
+                if (VolumeTracingBaker)
+                    VolumeTracingBaker.WaitABit();
                 return;
             }
 
