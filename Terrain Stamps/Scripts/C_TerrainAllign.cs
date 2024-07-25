@@ -19,7 +19,7 @@ namespace QuizCanners.StampTerrain
         [SerializeField] private bool _randomizeRotation;
         [SerializeField] private float _randomizedYaw01;
         [SerializeField] private bool _preserveScale;
-        [SerializeField] private float _scale = 1;
+     //   [SerializeField] private float _scale = 1;
 
        
 

@@ -40,6 +40,8 @@ Shader "QcRendering/Terrain/Integration"
 			#pragma multi_compile qc_NO_VOLUME qc_GOT_VOLUME 
 			#pragma multi_compile ___ _qc_IGNORE_SKY 
 
+             #pragma multi_compile ___ qc_USE_TERRAIN
+
             struct v2f
             {
                 float4 pos			: SV_POSITION;
@@ -83,41 +85,51 @@ Shader "QcRendering/Terrain/Integration"
                 float3 viewDir = normalize(i.viewDir);
                 float2 screenUv = i.screenPos.xy / i.screenPos.w;
 
-                float3 rawTerrainNormal;
-                float4 terrainControl = Ct_SampleTerrainAndNormal(i.worldPos, rawTerrainNormal);
-
-                float height;
-                GetTerrainHeight(terrainControl, height);
-
-                float4 terrainMads;
-                float3 terrainNormal;
-                float3 terrainCol;
-                GetTerrainBlend(i.worldPos, terrainControl, rawTerrainNormal , terrainNormal, terrainCol, terrainMads);
-
-                 fixed4 objTex = tex2D(_MainTex, i.texcoord);
+                 fixed4 tex = tex2D(_MainTex, i.texcoord);
                  float3 bump = UnpackNormal(_BumpMap.Sample(sampler_BumpMap, i.texcoord));
                  float4 madsMapObj = _SpecularMap.Sample(sampler_BumpMap, i.texcoord);
 
-                 float3 objectNormal = i.normal.xyz;
-                 ApplyTangent (objectNormal, bump, i.wTangent);
+                    float3 normal = i.normal.xyz;
+                 ApplyTangent (normal, bump, i.wTangent);
 
-                  float ao = madsMapObj.g;
+                      float ao = 1;
+                      float3 rawNormal =i.normal.xyz;
 
-                 float showTerrain;
-                 float forcedShowTerrain;
-                 GetIntegration(terrainControl, terrainMads, madsMapObj, objectNormal, i.worldPos, _BlendHeight, _BlendSharpness, _FoceContactBlend, showTerrain, forcedShowTerrain);
+                 float4 madsMap;
 
-               
+                 #if qc_USE_TERRAIN
+                    float3 rawTerrainNormal;
+                    float4 terrainControl = Ct_SampleTerrainAndNormal(i.worldPos, rawTerrainNormal);
 
-                float3 tex = lerp( objTex, terrainCol, showTerrain);
-                float4 madsMap = lerp( madsMapObj,terrainMads, showTerrain);
-                float3 rawNormal = normalize( lerp(i.normal.xyz, rawTerrainNormal, showTerrain));
-                float3 normal = normalize(lerp( objectNormal,terrainNormal, showTerrain));
-                float rawFresnel = saturate(1- dot(viewDir, rawNormal));
+                    float height;
+                    GetTerrainHeight(terrainControl, height);
 
+                    float4 terrainMads;
+                    float3 terrainNormal;
+                    float3 terrainCol;
+                    GetTerrainBlend(i.worldPos, terrainControl, rawTerrainNormal , terrainNormal, terrainCol, terrainMads);
+
+                     float showTerrain;
+                     float forcedShowTerrain;
+                     GetIntegration(terrainControl, terrainMads, madsMapObj, rawNormal, i.worldPos, _BlendHeight, _BlendSharpness, _FoceContactBlend, showTerrain, forcedShowTerrain);
+
+                    tex.rgb = lerp( tex.rgb, terrainCol, showTerrain);
+                    madsMap = lerp( madsMapObj,terrainMads, showTerrain);
+                    rawNormal = normalize( lerp(rawNormal, rawTerrainNormal, showTerrain));
+                    normal = normalize(lerp( normal,terrainNormal, showTerrain));
+                 
+                     madsMap.g = lerp(lerp(terrainMads.g,1,showTerrain) * madsMapObj.g, terrainMads.g, forcedShowTerrain);
+
+                    ao = lerp(ao, 1, forcedShowTerrain);
+
+                #else
+                    madsMap =  madsMapObj;
+                #endif
+
+                   float rawFresnel = saturate(1- dot(viewDir, rawNormal));
                // ao = min(ao, madsMap.g); //, smoothstep(0.9,1,showTerrain));
 
-                 ao = lerp(ao * madsMap.g, madsMap.g, forcedShowTerrain);
+              
 
                 float shadow = SHADOW_ATTENUATION(i);
 
@@ -127,10 +139,13 @@ Shader "QcRendering/Terrain/Integration"
 
 			    ao *= SampleSS_Illumination( screenUv, illumination);
 			    shadow *= saturate(1-illumination.b);
-                ao *= madsMap.g; 
+                 ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
+ 
+              //  return ao;
+
 
                 float metal = 0; 
-				float fresnel =  GetFresnel_FixNormal(normal, terrainNormal, viewDir);
+				float fresnel =  GetFresnel_FixNormal(normal, rawNormal, viewDir);
 
 				MaterialParameters precomp;
 					

@@ -58,7 +58,7 @@ Shader "Unlit/Fog Layers Display"
 		            return 0;
 	            #endif
 
-	            distance = min(distance, qc_LayeredFog_Distance);
+	            distance = min(distance, qc_LayeredFog_Distance-1);
 
 	            float index;
                 float fraction;

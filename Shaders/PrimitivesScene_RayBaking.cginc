@@ -41,7 +41,7 @@ float3 modifyDirectionWithRoughnessFast(in float3 normal, in float3 refl, in flo
 
 void ResampleBakedLight(inout float3 col, inout float3 gatherLight, float3 pos, float3 normal, float roughness)
 {
-	float RESAMPLE_COEFFICIENT = 0.5;
+	float RESAMPLE_COEFFICIENT = 0.33;
 
 	#if !qc_NO_VOLUME && RT_TO_CUBEMAP
 		float outOfBounds;
@@ -60,16 +60,21 @@ void ResampleBakedLight(inout float3 col, inout float3 gatherLight, float3 pos, 
 
 void ResampleBakedLight_Specular(inout float3 col, inout float3 gatherLight, float3 pos, float3 normal, float3 rd, float roughness)
 {
-	float RESAMPLE_COEFFICIENT_SPECULAR = 0.5;
+	float RESAMPLE_COEFFICIENT_SPECULAR = 0.33;
 
 	#if !qc_NO_VOLUME && RT_TO_CUBEMAP
-		float angle = abs(dot(rd, normal));// parallel would mean little reflection
+		float angle = abs(dot(rd, normal));// perpendicular would mean no specular
 
 		gatherLight += col.rgb * SampleVolume_CubeMap_Internal(pos, reflect(rd, normal)) * (1-angle) * RESAMPLE_COEFFICIENT_SPECULAR * (1-roughness);
 	#endif
 }
 
-
+void ResampleBakedLight_Cascade(float3 col, inout float3 gatherLight, float3 randomPoint, float3 rd, float weight)
+{
+	#if !qc_NO_VOLUME && RT_TO_CUBEMAP
+		gatherLight += col.rgb * weight * SampleVolume_CubeMap_Internal(randomPoint, rd);
+	#endif
+}
 
 float GetSpecularAttenuation(float3 rd, float3 normal, float roughness, float3 lightDir)
 {
@@ -100,7 +105,8 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 	float4 mat = 0;
 
 	float BOUNCED_DIRECT_LIGHT_MULTIPLIER = 1;
-	float FADE_RAY_AT = _RayMarchingVolumeVOLUME_POSITION_N_SIZE.w*3;
+	float CELL_SIZE = _RayMarchingVolumeVOLUME_POSITION_N_SIZE.w;
+	float FADE_RAY_AT = CELL_SIZE*3;
 	float rayHitDist = FADE_RAY_AT;
 	
 	float3 directional = GetDirectional();
@@ -142,6 +148,10 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 			, distance);
 		}
 
+		float rndPointWeight = 1/(1+rayHitDist * seed.x * 0.75 / CELL_SIZE);
+
+		float3 randomLinePoint = ro + rd * rayHitDist * seed.x * 0.75;
+
 		ro += rd * rayHitDist;
 
 		//float3 postColor;
@@ -152,6 +162,8 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 
 		col *= smoothstep(0, FADE_RAY_AT, rayHitDist);
 
+
+		ResampleBakedLight_Cascade(col,  gatherLight, randomLinePoint, rd, rndPointWeight);
 
 /*
 #if RT_TO_CUBEMAP && _qc_IGNORE_SKY
@@ -202,7 +214,8 @@ if (type < DIELECTRIC + 0.5)
 				{
 					float attenuationDiffuse = smoothstep(0, 1, dot(qc_SunBackDirection.xyz, normal));
 		
-					float shadow = GetSunShadowsAttenuation(ro);
+                    float shadow = 1;
+                   // GetSunShadowsAttenuation(ro); // is the problem
 
 					if (shadow > 0.2 && Raycast(ro + normal*0.01, qc_SunBackDirection.xyz + (seed.zyx-0.5)*0.3, float2(0.0001, MAX_DIST_EDGE)))
 					{
@@ -231,7 +244,7 @@ if (type < DIELECTRIC + 0.5)
 				#if !_qc_IGNORE_SKY
 				if (_qc_SunVisibility > 0)
 				{
-					float shadow = GetSunShadowsAttenuation(ro);
+                    float shadow = 1; //GetSunShadowsAttenuation(ro);
 
 					if (shadow > 0.2 && Raycast(ro + normal*0.01, qc_SunBackDirection.xyz + (seed.zyx-0.5)*0.3, float2(0.0001, MAX_DIST_EDGE)))
 					{
@@ -271,7 +284,7 @@ if (type < DIELECTRIC + 0.5)
 					{
 						float toSUn = smoothstep(0, -1, dot(qc_SunBackDirection.xyz, normal));
 
-						float shadow = GetSunShadowsAttenuation(ro);
+                    float shadow = 1; //GetSunShadowsAttenuation(ro);
 
 						if (shadow > 0.2 && Raycast(ro + normal*0.001, qc_SunBackDirection.xyz + (seed.zyx-0.5)*0.3, float2(0.0001, MAX_DIST_EDGE)))
 						{

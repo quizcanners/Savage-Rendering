@@ -163,14 +163,14 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 
 			float toTerrain = pos.y - terrainHeight;
 
-			visibilityMode *= 0.25 + 1/(1+ toTerrain * 0.05);
+			float ignoreTerrain = saturate(level/4);
+
+			//visibilityMode *= lerp(0.25 + 1/(1+ abs(toTerrain * 0.02)), 1, ignoreTerrain); 
 
 		#endif
 
 		if (_qc_WindDirection.a > 0.01)
 		{
-			//float4 noise = Noise3D(pos*0.02 + _qc_WindDirection.xyz * _Time.x);
-
 			float3 posToSample = pos *0.1 + _qc_WindDirection.xyz * _Time.x;
 
 			float4 noise = Noise3D(posToSample * pow(0.1 , nearLevel) );
@@ -204,7 +204,7 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 
 		noise = lerp(noise,noiseNext, transition);
 
-		float showRain = lerp(_qc_RainVisibility * (0.5 + noise.y) , nearSurface*(3 + level * 3) * (1-abs(scene.y)) * noise.z, nearSurface);
+		float showRain =  lerp(_qc_RainVisibility * (0.5 + noise.y) , nearSurface*(3 + level * 3) * (1-abs(scene.y)) * noise.z, nearSurface);
 		
 		//_qc_RainVisibility;
 

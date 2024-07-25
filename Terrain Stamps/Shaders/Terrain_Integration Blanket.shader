@@ -150,7 +150,7 @@ Shader "QcRendering/Terrain/Integration Blanket"
                  float3 objectNormal = i.normal.xyz;
                  ApplyTangent (objectNormal, bump, i.wTangent);
 
-                  float ao = madsMapObj.g;
+                  float ao = 1;
 
                    float3 tex;
                    float4 madsMap;
@@ -167,19 +167,30 @@ Shader "QcRendering/Terrain/Integration Blanket"
                     rawNormal = normalize( lerp(i.normal.xyz, rawTerrainNormal, showTerrain));
                     normal = normalize(lerp( objectNormal,terrainNormal, showTerrain));
 
-                    ao = lerp(ao * madsMap.g, madsMap.g, forcedShowTerrain);
+                    madsMap.g = lerp(lerp(terrainMads.g,1,showTerrain) * madsMapObj.g, terrainMads.g, forcedShowTerrain);
+
+                    ao = lerp(ao, 1, forcedShowTerrain);
+
+                  
 
                 #else 
                     tex = objTex;
                     madsMap =  madsMapObj;
                     rawNormal = i.normal.xyz;
                     normal = objectNormal;
+
+                   
+
                 #endif
+
+             
 
                 float rawFresnel = saturate(1- dot(viewDir, rawNormal));
 
-               // ao = min(ao, madsMap.g); //, smoothstep(0.9,1,showTerrain));
+               //ao = min(ao, madsMap.g); //, smoothstep(0.9,1,showTerrain));
+                  ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
 
+               
                
 
                 float shadow = SHADOW_ATTENUATION(i);
@@ -195,7 +206,9 @@ Shader "QcRendering/Terrain/Integration Blanket"
 
 			    shadow *= saturate(1-illumination.b);
 
-                ao *= madsMap.g; // + (1-madsMap.g) * rawFresnel;
+            
+
+               // + (1-madsMap.g) * rawFresnel;
 
 
             //   return float4(rawNormal,1);
@@ -203,9 +216,9 @@ Shader "QcRendering/Terrain/Integration Blanket"
                 float metal = 0; // madsMap.r;
 				float fresnel =  GetFresnel_FixNormal(normal, rawNormal, viewDir);//GetFresnel(normal, viewDir) * ao;
 
-
+                 
               // return float4(rawNormal, 1);
-
+                 // return ao;
             //  return madsMap.a;
 
 				MaterialParameters precomp;
@@ -260,6 +273,8 @@ Shader "QcRendering/Terrain/Integration Blanket"
 				#pragma shader_feature_local ___ _WIND_SHAKE
 				#include "UnityCG.cginc"
 				
+                 #pragma multi_compile ___ qc_USE_TERRAIN
+
 				#include "Assets/Qc_Rendering/Shaders/Savage_Vegetation.cginc"
 
 
@@ -281,11 +296,12 @@ Shader "QcRendering/Terrain/Integration Blanket"
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_TRANSFER_INSTANCE_ID(v, o);
 
-					 float3 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
-                    float4 objectOrigin = mul(unity_ObjectToWorld, float4(0.0,0.0,0.0,1.0) );
-                    worldPos = AllignPosition(worldPos.xyz, objectOrigin);
-                    v.vertex = mul(unity_WorldToObject, float4(worldPos, v.vertex.w));
-
+                    #if qc_USE_TERRAIN
+                        float3 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
+                        float4 objectOrigin = mul(unity_ObjectToWorld, float4(0.0,0.0,0.0,1.0) );
+                        worldPos = AllignPosition(worldPos.xyz, objectOrigin);
+                        v.vertex = mul(unity_WorldToObject, float4(worldPos, v.vertex.w));
+                    #endif
 					//UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 					TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
 

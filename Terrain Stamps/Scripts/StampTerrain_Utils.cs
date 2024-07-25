@@ -514,7 +514,6 @@ namespace QuizCanners.StampTerrain
 
                 if (!dirty && currentlySet && (config == currentlySet))
                 {
-                    Debug.Log("Already Set");
                     return;
                 }
 

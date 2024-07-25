@@ -20,6 +20,10 @@ void GetFogLayerIndexFromDistance(float distance, out float index, out float fra
 	///float rawIndex = log2((distance + initialStep) /initialStep);
 	index = floor(rawIndex);
 	fraction = rawIndex - index;
+
+	float overshoot = step(0, index - 15);
+	index = lerp(index, 15, overshoot);
+	fraction = lerp(fraction, 1, overshoot);
 }
 
 
@@ -31,7 +35,7 @@ float4 SampleLayeredFog(float distance, float2 uv)
 		return 0;
 	#endif
 
-	distance = min(distance, qc_LayeredFog_Distance);
+	//distance = min(distance, qc_LayeredFog_Distance);
 
 	float index;
     float fraction;

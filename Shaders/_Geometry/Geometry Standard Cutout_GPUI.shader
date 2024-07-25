@@ -23,23 +23,30 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 		[KeywordEnum(OFF, ON, INVERTEX, MIXED)] _PER_PIXEL_REFLECTIONS("Traced Reflections", Float) = 0
 		[Toggle(_DYNAMIC_OBJECT)] dynamic("Dynamic Object", Float) = 0
 
+		 _MipScale ("Mip Level Alpha Scale", Range(0,1)) = 0.25
+		  _Cutoff ("Cutoff", Range(0,1)) = 0.5
 	}
 
-	Category
-	{
+	
 		SubShader
 		{
+			Tags
+			{
+				"Queue"="AlphaTest"
+				"RenderType" = "TransparentCutout"
+			}
+
+			AlphaToMask On
+			Cull Off
+
 			Pass
 			{
-				Tags
-				{
-					"Queue" = "AlphaTest"
-					"RenderType" = "Opaque"
-					"LightMode" = "ForwardBase"
-				}
+				Tags { "LightMode"="ForwardBase" }
 
-				ColorMask RGBA
-				Cull Off//Back
+				
+				
+
+				
 
 				CGPROGRAM
 #include "UnityCG.cginc"
@@ -88,8 +95,8 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 					float2 texcoord		: TEXCOORD0;
 					float2 texcoord1	: TEXCOORD1;
 					float3 worldPos		: TEXCOORD2;
-					float3 normal		: TEXCOORD3;
-					float4 wTangent		: TEXCOORD4;
+					float3 normal		: NORMAL;
+					float4 wTangent		: TANGENT;
 					float3 viewDir		: TEXCOORD5;
 					SHADOW_COORDS(6)
 					float4 traced : TEXCOORD7;
@@ -146,6 +153,18 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 
 				sampler2D _SpecularMap;
 
+				float _MipScale;
+				float _Cutoff;
+
+			float CalcMipLevel(float2 texture_coord)
+            {
+                float2 dx = ddx(texture_coord);
+                float2 dy = ddy(texture_coord);
+                float delta_max_sqr = max(dot(dx, dx), dot(dy, dy));
+                
+                return max(0.0, 0.5 * log2(delta_max_sqr));
+            }
+
 				float4 frag(v2f i) : COLOR
 				{
 					float3 viewDir = normalize(i.viewDir.xyz);
@@ -153,33 +172,39 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 
 						float2 screenUv = i.screenPos.xy / i.screenPos.w;
 				
+						
+
 						float4 tex = tex2D(_MainTex, uv);
-						clip(tex.a-0.1);
+
+						clip(tex.a - _Cutoff);
+
+					//	tex.a *= 1 + max(0, CalcMipLevel(uv * _MainTex_TexelSize.zw)) * _MipScale;
+						//tex.a = (tex.a - _Cutoff) / max(fwidth(tex.a), 0.0001) + 0.5;
+
+						//clip(tex.a-0.1);
 
 						//r - away from roots
 						// g - close to roots
 
 						//return i.color.a;
 
-						float4 madsMap = tex2D(_SpecularMap, uv);
-						float displacement = madsMap.b;
-
-						float dott = dot(viewDir, i.normal.xyz);
-
-						#if _BACKFACE_FLIP
-						float isBackface = smoothstep( 0, -0.001, dott);
-
-						i.normal.xyz = lerp(i.normal.xyz, -i.normal.xyz, isBackface);
-
+					#if _BACKFACE_FLIP
+						float isBack = (dot(viewDir, i.normal.xyz) > 0) ? 1 : -1;
+						i.normal.xyz *= isBack; 
 					#endif
-				
+
+					float4 madsMap = tex2D(_SpecularMap, uv);
+					float displacement = madsMap.b;
+
+					float dott = dot(viewDir, i.normal.xyz);
 
 					float rawFresnel = smoothstep(1, 0, abs(dott));
 					float offsetAmount = (1 + rawFresnel * rawFresnel * 4);
 
 					float3 tnormal = UnpackNormal(tex2D(_BumpMap, uv));
-					uv -= tnormal.rg * _MainTex_TexelSize.xy;
 					float3 normal = i.normal.xyz;
+
+					ApplyTangent(normal, tnormal, i.wTangent);
 
 					float4 illumination;
 					float ao = 
@@ -211,7 +236,7 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 #endif
 
 				
-					ApplyTangent(normal, tnormal, i.wTangent);
+					
 
 				//	shadow *= SHADOW_ATTENUATION(i);//getShadowAttenuation(i.worldPos);
 
@@ -349,9 +374,9 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 					UNITY_SETUP_INSTANCE_ID(i);
 					float4 texcol = tex2D( _MainTex, i.uv );
 
-					float fwid = length(fwidth(i.uv));
+				//	float fwid = length(fwidth(i.uv));
 
-					clip(texcol.a - 0.1);
+					clip(texcol.a -_Cutoff);
 
 					//clip(texcol.a - 0.5 + smoothstep(0, 1, fwid * 100) * 0.45);
 
@@ -361,5 +386,5 @@ Shader "GPUInstancer/QcRendering/Geometry/Standard Cutout"
 			}
 		}
 		Fallback "Diffuse"
-	}
+	
 }

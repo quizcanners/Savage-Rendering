@@ -69,6 +69,7 @@ struct VertexInput
     float4 vertex   : POSITION;
     float3 normal   : NORMAL;
     float2 uv0      : TEXCOORD0;
+    float2 uv1      : TEXCOORD1;
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS) && defined(_PARALLAXMAP)
         half4 tangent   : TANGENT;
     #endif
@@ -149,6 +150,7 @@ struct TessData
     float4 vertex   : POS; 
     float3 normal   : NORMAL;
     float2 uv0      : TEXCOORD0;
+    float2 uv1      : TEXCOORD1;
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS) && defined(_PARALLAXMAP)
         half4 tangent   : TANGENT;
     #endif
@@ -163,6 +165,7 @@ TessData vs_tess (VertexInput v) {
   #endif
   o.normal = v.normal;
   o.uv0 = v.uv0;
+  o.uv1 = v.uv1;
   return o;
 }
 
@@ -224,6 +227,7 @@ TessData hs_tess(InputPatch<TessData, 3> v, uint cpID : SV_OutputControlPointID)
 	o.vertex = v[cpID].vertex;
     o.normal = v[cpID].normal;
     o.uv0 = v[cpID].uv0;
+    o.uv1 = v[cpID].uv1;
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS) && defined(_PARALLAXMAP)
         o.tangent = v[cpID].tangent;
     #endif

@@ -109,6 +109,7 @@ Shader "QcRendering/Terrain/Flat"
                 ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
 
 
+
           //  return float4(rawNormal, 1);
                // ao = 1;
 
@@ -140,6 +141,8 @@ Shader "QcRendering/Terrain/Flat"
 
                 float offsetAmount = (1 + rawFresnel * rawFresnel * 4);
 
+
+             //  col = ao;
 
                 	FragColDepth result;
 					result.depth = calculateFragmentDepth(i.worldPos + (displacement - 0.5) * viewDir * offsetAmount  * 0.1); // * _HeightOffset);

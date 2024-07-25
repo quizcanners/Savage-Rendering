@@ -18,6 +18,11 @@ namespace QuizCanners.StampTerrain
         [SerializeField] private float _terrainHeight01 = 0.5f;
         [SerializeField] private int _defaultTerrain;
 
+        public void SetBakingArea(Vector3 center)
+        {
+            transform.position = new Vector3(center.x, 0, center.z);
+        }
+
         public void SetBakingArea(Vector3 center, Vector3 size) 
         {
             transform.position = new Vector3(center.x, 0, center.z);

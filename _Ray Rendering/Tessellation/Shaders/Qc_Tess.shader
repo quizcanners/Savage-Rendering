@@ -57,24 +57,26 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 #			endif
 			//half        _Parallax;
 			
-			float SampleHeight(float2 uv, out float4 dam)
+			float4 SampleMads(float2 uv, float2 uv2, out float4 dam)
 			{
-				float h = tex2Dlod(_ParallaxMap, float4(uv, 0, 0)).b;
+				float4 mads = tex2Dlod(_ParallaxMap, float4(uv, 0, 0));
+				float h = mads.b;
 
 				#if !_DAMAGED
 					dam = 0;
-					return h;
+					return mads;
 				#else
-					dam = tex2Dlod(_Damage_Tex, float4(uv, 0, 0));
+					dam = tex2Dlod(_Damage_Tex, float4(uv2, 0, 0));
 					h *= saturate(1-dam.g);
 
 					h = lerp(h, 0.25, saturate(dam.r)); // blood
 
-					return h;
+					mads.b = h;
+					return mads;
 				#endif
 			}
 
-			float SampleHeight(float2 uv)
+			float4 SampleMads(float2 uv, float2 uv2)
 			{
 			/*
 				float h = tex2Dlod(_ParallaxMap, float4(uv, 0, 0)).b;
@@ -91,13 +93,13 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 				#endif*/
 				float4 dam;
 
-				return SampleHeight(uv, dam);
+				return SampleMads(uv, uv2, dam);
 			}
 
-			float3 GetDispWorldSpace (float2 uv, float3 norm, float dist)
+			float3 GetDispWorldSpace (float2 uv, float2 uv2, float3 norm, float dist)
 			{
 				float fadeOut = saturate((_maxDist - dist) / (_maxDist * 0.7f));
-				float d = (SampleHeight(uv) + _DispOffset) * _Displacement;
+				float d = (SampleMads(uv, uv2).b + _DispOffset) * _Displacement;
 				//..d = d + _DispOffset * _Displacement;
 				return norm * d * fadeOut;
 			}
@@ -140,8 +142,8 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 			#pragma multi_compile qc_NO_VOLUME qc_GOT_VOLUME 
 			#pragma multi_compile ___ _qc_IGNORE_SKY 
 
-			#pragma shader_feature_local _PER_PIXEL_REFLECTIONS_OFF _PER_PIXEL_REFLECTIONS_ON _PER_PIXEL_REFLECTIONS_INVERTEX  _PER_PIXEL_REFLECTIONS_MIXED
-			#pragma shader_feature_local _REFLECTIVITY_OFF _REFLECTIVITY_PLASTIC _REFLECTIVITY_METAL _REFLECTIVITY_LAYER  _REFLECTIVITY_MIXED_METAL  _REFLECTIVITY_PAINTED_METAL
+			#pragma shader_feature_local _REFLECTIVITY_OFF _REFLECTIVITY_PLASTIC _REFLECTIVITY_METAL _REFLECTIVITY_LAYER _REFLECTIVITY_MIXED_METAL
+			#pragma shader_feature_local _PER_PIXEL_REFLECTIONS_OFF _PER_PIXEL_REFLECTIONS_ON 
 			#pragma shader_feature_local ___ _NO_HB_AMBIENT
 
 
@@ -175,9 +177,9 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 			}
 
 				
-			float4 disp (float4 pos, float2 uv, float3 norm)
+			float4 disp (float4 pos, float2 uv, float2 uv2, float3 norm)
 			{
-				float d = SampleHeight(uv) * _Displacement;
+				float d = SampleMads(uv, uv2).b * _Displacement;
 				d = d * 0.5 - 0.5 + _DispOffset;
 
 				return UnityObjectToClipPos(float4(pos.xyz + norm * d, pos.w));
@@ -292,7 +294,7 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 				//return ed.a;
 
 
-				o.posWorld = posWorld + GetDispWorldSpace(tex.xy, normalWorld, dist) ;//* (1- ed.a);
+				o.posWorld = posWorld + GetDispWorldSpace(tex.xy, uv1.xy, normalWorld, dist) ;//* (1- ed.a);
 
 				float4 vertexDta = mul(unity_WorldToObject, float4(o.posWorld.xyz,1));
 
@@ -349,20 +351,27 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 
 				float shadow = SHADOW_ATTENUATION(i);
 				float4 tex = tex2D(_MainTex, i.tex.xy);
-				float4 dam;
-				float4 madsMap = SampleHeight(i.tex.xy, dam);
-
+				float4 mask;
+				float4 madsMap = SampleMads(i.tex.xy, uv2, mask);
+				
 #			if _DAMAGED
 				float4 damTex = tex2D(_DamDiffuse, uv2);
-					float isDam = smoothstep(0.1, 0.3, dam.g);
-			//	return isDam;
+				float isDam = smoothstep(0.1, 0.3, mask.g);
+				//return dam;
 
-			
 				tex = lerp(tex, damTex, isDam);
 				madsMap = lerp(madsMap, float4(0,0.5,0,0.1), isDam);
 				bump = lerp (bump, tex2D(_BumpMapDam, i.tex.xy), isDam);
 
-				
+				float showRed = 0;
+
+				float water =0;
+	
+				//mask.r *= 10;
+
+				showRed = ApplyBlood(mask, water, tex.rgb, madsMap, madsMap.b);
+
+				madsMap = lerp(madsMap,1, saturate(showRed));
 
 #			endif
 
@@ -411,7 +420,7 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 				precomp.metalColor = tex; //lerp(tex, _MetalColor, _MetalColor.a);
 
 
-				float3 col = GetReflection_ByMaterialType(precomp, normalWorld, normalWorld, viewDir, i.posWorld);
+				float3 col = GetReflection_ByMaterialType(precomp, normalWorld, normalWorld, viewDir, i.posWorld + normalWorld * 0.2);
 
 				ApplyBottomFog(col, i.posWorld.xyz, viewDir.y);
 
@@ -451,10 +460,10 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 			#include "Tess_Standard_Shadow.cginc"
 
 
-			float4 disp (float4 pos, float2 uv, float3 norm)
+			float4 disp (float4 pos, float2 uv, float2 uv2, float3 norm)
 			{
 			//	float fadeOut =  saturate((_maxDist - distance(mul(unity_ObjectToWorld, pos.xyz), _WorldSpaceCameraPos)) / (_maxDist * 0.7f));
-				float d = SampleHeight(uv * _MainTex_ST.xy + _MainTex_ST.zw)* _Displacement;//tex2Dlod(_ParallaxMap, float4(uv * _MainTex_ST.xy + _MainTex_ST.zw, 0, 0)).b * _Displacement;
+				float d = SampleMads(uv * _MainTex_ST.xy + _MainTex_ST.zw, uv2).b * _Displacement;//tex2Dlod(_ParallaxMap, float4(uv * _MainTex_ST.xy + _MainTex_ST.zw, 0, 0)).b * _Displacement;
 				d = d * 0.5 - 0.5 + _DispOffset;
 				return float4(pos.xyz + mul(unity_WorldToObject, norm) * d, pos.w);
 			}
@@ -476,6 +485,7 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 				float4 vertex = vi[0].vertex * fU + vi[1].vertex * fV + vi[2].vertex * fW;
 				v.normal = vi[0].normal * fU + vi[1].normal * fV + vi[2].normal * fW;
 				v.uv0 = vi[0].uv0 * fU + vi[1].uv0 * fV + vi[2].uv0 * fW;
+				v.uv1 = vi[0].uv1 * fU + vi[1].uv1 * fV + vi[2].uv1 * fW;
 
 				phongIt4 (vertex, vi[0].vertex, vi[1].vertex, vi[2].vertex, vi[0].normal, vi[1].normal, vi[2].normal, bary);
 				
@@ -497,7 +507,7 @@ Shader "QcRendering/Tessellation/Qc_Tess_Standard_Specular"
 
 				float dist = length(posWorld.xyz - _WorldSpaceCameraPos.xyz) - _ProjectionParams.y;
 				
-				posWorld = mul(unity_ObjectToWorld, float4(vertex.xyz,1)).xyz + GetDispWorldSpace(v.uv0, normal, dist); 
+				posWorld = mul(unity_ObjectToWorld, float4(vertex.xyz,1)).xyz + GetDispWorldSpace(v.uv0.xy, v.uv1.xy, normal, dist); 
 
 				v.vertex = mul(unity_WorldToObject, float4(posWorld.xyz,1)); 
 

@@ -153,6 +153,9 @@ namespace QuizCanners.VolumeBakedRendering
 
                 this.SkipLerp();
 
+                if (RenderSettings.ambientMode != UnityEngine.Rendering.AmbientMode.Trilight)
+                    RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+
                 if (RaySkybox)
                     RenderSettings.skybox = RaySkybox;
             }

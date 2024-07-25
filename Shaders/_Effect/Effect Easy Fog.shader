@@ -36,12 +36,15 @@ Shader "QcRendering/Effect/Easy Fog"
 			//	 #pragma multi_compile __ RT_FROM_CUBEMAP 
 				#define RENDER_DYNAMICS
 
-				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler.cginc"
-			//#include "Assets/Qc_Rendering/Shaders/Savage_DepthSampling.cginc"
-				#pragma multi_compile ___ _qc_IGNORE_SKY
+				#pragma multi_compile ___ qc_LAYARED_FOG
+			 	#pragma multi_compile ___ _qc_IGNORE_SKY
 
-				   #pragma multi_compile ___ qc_LAYARED_FOG
-			 	#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Transparent.cginc"
+				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler.cginc"
+				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Transparent.cginc"
+			//#include "Assets/Qc_Rendering/Shaders/Savage_DepthSampling.cginc"
+				
+
+			
 
 				  #pragma vertex vert
 				  #pragma fragment frag
@@ -211,7 +214,7 @@ Shader "QcRendering/Effect/Easy Fog"
 
 						float4 result = float4(col, alpha);
 
-						ApplyLayeredFog_Transparent(result, screenUV, i.worldPos);
+					ApplyLayeredFog_Transparent(result, screenUV, i.worldPos);
 
 						  return result;
 					  }

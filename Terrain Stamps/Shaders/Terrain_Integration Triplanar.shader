@@ -86,10 +86,12 @@ Shader "QcRendering/Terrain/Integration Triplanar"
                 return o;
             }
 
-           
-            Texture2D _BumpMapBig;
-            Texture2D _MadsBig;
-            SamplerState sampler_MadsBig;
+          
+            UNITY_DECLARE_TEX2D(_MadsBig);
+            UNITY_DECLARE_TEX2D(_BumpMapBig);
+            //Texture2D _BumpMapBig;
+           // Texture2D _MadsBig;
+           // SamplerState sampler_MadsBig;
             float _BlendHeight;
             float _BlendSharpness;
 
@@ -118,46 +120,50 @@ Shader "QcRendering/Terrain/Integration Triplanar"
               //   float3 bump = UnpackNormal(tex2D(_BumpMap, i.texcoord));
                //  float4 madsMapObj = tex2D(_SpecularMap, i.texcoord);
 
-                 float4 madsBig = _MadsBig.Sample(sampler_MadsBig, i.texcoord);
-                 float3 bumpBig = UnpackNormal(_BumpMapBig.Sample(sampler_MadsBig, i.texcoord));
+                 float4 madsBig = UNITY_SAMPLE_TEX2D(_MadsBig,  i.texcoord);//_MadsBig.Sample(sampler_MadsBig, i.texcoord);
+                 float3 bumpBig = UNITY_SAMPLE_TEX2D(_BumpMapBig, i.texcoord);
+                 //UnpackNormal(_BumpMapBig.Sample(sampler_MadsBig, i.texcoord));
                  
                  float3 normal = i.normal.xyz;
                  ApplyTangent (normal, bumpBig, i.wTangent);
 
                  float3 tex;
                  float3 objNormalTrip;
-                 float4 madsMap;
-                 TriplanarSampling(i.worldPos, i.normal.xyz, tex, objNormalTrip, madsMap);
+                 float4 madsMapObj;
+                 TriplanarSampling(i.worldPos, i.normal.xyz, tex, objNormalTrip, madsMapObj);
 
                  float3 rawNormal = i.normal.xyz;
 
-                 float ao = madsBig.g;
+                 float ao =1;
+
+                 float4 madsMap;
 
                  #if qc_USE_TERRAIN
                      float forcedShowTerrain;
                      float showTerrain;
-                     GetIntegration(terrainControl, terrainMads, madsMap, rawNormal, i.worldPos, _BlendHeight, _BlendSharpness, _FoceContactBlend, showTerrain, forcedShowTerrain);
+                     GetIntegration(terrainControl, terrainMads, madsMapObj, rawNormal, i.worldPos, _BlendHeight, _BlendSharpness, _FoceContactBlend, showTerrain, forcedShowTerrain);
 
                     tex = lerp( tex, terrainCol, showTerrain);
-                    madsMap = lerp(madsMap, terrainMads, showTerrain);
+                    madsMap = lerp(madsMapObj, terrainMads, showTerrain);
                     rawNormal = normalize(lerp(rawNormal, rawTerrainNormal, showTerrain));
                     float3 projectedNormal = lerp(objNormalTrip,terrainNormal, showTerrain);
 
                     normal = lerp((normal + projectedNormal) * 0.5, terrainNormal, forcedShowTerrain);
 
                     normal = normalize(normal);
+
+                    madsMap.g = lerp(lerp(terrainMads.g,1,showTerrain) * madsMapObj.g, terrainMads.g, forcedShowTerrain);
+
+                    ao = lerp(ao, 1, forcedShowTerrain);
+
+                #else
+                    madsMap =  madsMapObj;
                 #endif
                  //  return float4(normal,1);
 
 
 
                 float rawFresnel = saturate(1- dot(viewDir, rawNormal));
-
-           //    return ao;
-           
-                #if qc_USE_TERRAIN
-                    ao = lerp(ao, 1, forcedShowTerrain); 
-                #endif
 
                 float shadow = SHADOW_ATTENUATION(i);
 
@@ -171,8 +177,10 @@ Shader "QcRendering/Terrain/Integration Triplanar"
 
                 ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
 
-              //  ao = 1;
+         //      return ao;
 
+              //  ao = 1;
+           
                 float metal =  madsMap.r;
 				float fresnel =  GetFresnel_FixNormal(normal, rawNormal, viewDir);
 
@@ -198,7 +206,7 @@ Shader "QcRendering/Terrain/Integration Triplanar"
 
 				ApplyBottomFog(col, i.worldPos.xyz, viewDir.y);
 
-               
+              // col.rgb = ao;
 
                 return float4(col,1);
             }

@@ -173,8 +173,10 @@ Shader "QcRendering/Geometry/Standard Cutout"
 
 						float4 tex = tex2D(_MainTex, uv);
 
-						tex.a *= 1 + max(0, CalcMipLevel(uv * _MainTex_TexelSize.zw)) * _MipScale;
-						tex.a = (tex.a - _Cutoff) / max(fwidth(tex.a), 0.0001) + 0.5;
+						clip(tex.a - _Cutoff);
+
+					//	tex.a *= 1 + max(0, CalcMipLevel(uv * _MainTex_TexelSize.zw)) * _MipScale;
+						//tex.a = (tex.a - _Cutoff) / max(fwidth(tex.a), 0.0001) + 0.5;
 
 						//clip(tex.a-0.1);
 
@@ -298,7 +300,7 @@ Shader "QcRendering/Geometry/Standard Cutout"
 					ApplyBottomFog(col.rgb, i.worldPos.xyz, viewDir.y);
 
 	
-					return float4(col, tex.a);
+					return float4(col, 1);
 
 				}
 				ENDCG
@@ -366,9 +368,9 @@ Shader "QcRendering/Geometry/Standard Cutout"
 					UNITY_SETUP_INSTANCE_ID(i);
 					float4 texcol = tex2D( _MainTex, i.uv );
 
-					float fwid = length(fwidth(i.uv));
+				//	float fwid = length(fwidth(i.uv));
 
-					clip(texcol.a - 0.8);
+					clip(texcol.a -_Cutoff);
 
 					//clip(texcol.a - 0.5 + smoothstep(0, 1, fwid * 100) * 0.45);
 

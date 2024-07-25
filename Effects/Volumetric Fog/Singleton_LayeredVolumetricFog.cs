@@ -160,7 +160,7 @@ namespace QuizCanners.SpecialEffects
         protected override void OnAfterEnable()
         {
             base.OnAfterEnable();
-            _settings.OnEnable();
+            _settings.ManagedOnEnable();
         }
 
         protected override void OnBeforeOnDisableOrEnterPlayMode(bool afterEnableCalled)
@@ -237,7 +237,7 @@ namespace QuizCanners.SpecialEffects
         }
         #endregion
 
-
+        #region Encode & Decode
         public CfgEncoder Encode() => new CfgEncoder().Add("params", _settings);
 
 
@@ -249,13 +249,16 @@ namespace QuizCanners.SpecialEffects
                 case "params": _settings.Decode(data); break;
             }
         }
+        #endregion
 
-        private class LayeredFogSettings : ICfg, IPEGI_ListInspect, IPEGI
+        private class LayeredFogSettings : ICfgCustom, IPEGI_ListInspect, IPEGI
         {
             private readonly ShaderProperty.FloatFeature _visibility = new(name: "qc_LayeredFog_Alpha", featureDirective: "qc_LAYARED_FOG");
             private readonly ShaderProperty.FloatValue _distance = new(name: "qc_LayeredFog_Distance");
 
             private float _targetVisibility;
+
+            private bool targetSet;
 
             private float Visibility_Internal
             {
@@ -266,17 +269,21 @@ namespace QuizCanners.SpecialEffects
             public float Visibility
             {
                 get => _targetVisibility;
-                set 
+                set
                 {
                     _targetVisibility = value;
-                    if (Application.isPlaying)
+                    if (!targetSet || !Application.isPlaying)
+                    {
                         Visibility_Internal = value;
+                        targetSet = true;
+                    }
                 }
             }
 
             public void Hide() 
             {
                 Visibility_Internal = 0;
+                Visibility = 0;
             }
 
             public float Distance
@@ -285,11 +292,20 @@ namespace QuizCanners.SpecialEffects
                 set => _distance.GlobalValue = value;
             }
 
+            #region Encode & Decode
+
+          
+
+            public void DecodeInternal(CfgData data)
+            {
+                this.DecodeTagsFrom(data);
+            }
+
             public void DecodeTag(string key, CfgData data)
             {
                 switch (key) 
                 {
-                    case "alpha": _targetVisibility = data.ToFloat(); break;
+                    case "alpha": _targetVisibility = data.ToFloat(); targetSet = true; break;
                     case "dist": _distance.Decode(data); break;
                 }
             }
@@ -299,6 +315,9 @@ namespace QuizCanners.SpecialEffects
                 .Add("dist", _distance)
                 ;
 
+            #endregion
+
+            #region Inspector
             public void Inspect()
             {
                 "Visibility".PegiLabel().Edit_01(ref _targetVisibility).Nl(()=> Visibility = _targetVisibility);
@@ -321,17 +340,21 @@ namespace QuizCanners.SpecialEffects
                     edited = index;
             }
 
+            #endregion
+
             internal void ManagedUpdate()
             {
                 if (Visibility_Internal != _targetVisibility)
                     Visibility_Internal = QcLerp.LerpBySpeed(Visibility_Internal, _targetVisibility, 1, unscaledTime: true);
             }
 
-            internal void OnEnable() 
+            internal void ManagedOnEnable() 
             {
                 if (!Application.isPlaying || Visibility < 0.01)
                     Hide();
             }
+
+       
         }
 
     }

@@ -21,13 +21,13 @@ MonoBehaviour:
       _value: col|39|r|5|0.357|g|5|0.508|b|5|0.764|a|4|1.01||fog|36|r|5|0.223|g|5|0.471|b|5|0.557|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|1|0|SnM|62|rot|54|x|9|-0.022037|y|9|-0.226492|z|9|-0.005126|w|7|0.97375|||Rain|1|0|Amb|0||SunInten|4|0.67|atten|32|b|20|b|14|lm|1|0|sp|1|1|||f|1|1||ArtLights|1|y|hdr|5|Space|layerFog|50|params|39|vis|12|val|5|0.317||dist|10|val|3|500||||
   - name: Night
     data:
-      _value: col|39|r|5|0.417|g|5|0.428|b|5|0.783|a|4|0.75||fog|35|r|4|0.07|g|5|0.123|b|5|0.189|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|5|0.542|SnM|60|rot|52|x|8|0.911063|y|9|-0.162137|z|8|0.334827|w|7|0.17767|||Rain|1|0|Amb|29|r|5|0.202|g|4|0.31|b|5|0.472||SunInten|4|1.53|atten|35|b|20|b|14|lm|1|0|sp|1|1|||f|4|0.45||ArtLights|1|y|hdr|5|Night|layerFog|50|params|39|vis|12|val|5|0.281||dist|10|val|3|500||||
+      _value: col|39|r|5|0.417|g|5|0.428|b|5|0.783|a|4|0.75||fog|35|r|4|0.07|g|5|0.123|b|5|0.189|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|1|0|SnM|60|rot|52|x|8|0.911063|y|9|-0.162137|z|8|0.334827|w|7|0.17767|||Rain|1|0|Amb|29|r|5|0.202|g|4|0.31|b|5|0.472||SunInten|4|1.53|atten|35|b|20|b|14|lm|1|0|sp|1|1|||f|4|0.45||ArtLights|1|y|hdr|5|Night|layerFog|44|params|33|alpha|5|0.646|dist|10|val|3|500||||
   - name: Mid Day
     data:
       _value: col|39|r|5|0.972|g|4|0.95|b|5|0.738|a|5|0.287||fog|36|r|5|0.344|g|5|0.585|b|5|0.736|a|1|1||maxFrms|3|500|ml|39|r|5|0.151|g|5|0.151|b|5|0.151|a|4|0.49||stars|1|0|Shad|1|0|SnM|62|rot|54|x|9|-0.342632|y|8|0.531359|z|8|0.191174|w|9|-0.750809|||Rain|1|0|Amb|30|r|5|0.607|g|5|0.691|b|5|0.736||SunInten|4|1.45|atten|32|b|20|b|14|lm|1|0|sp|1|1|||f|1|3||ArtLights|1|n|hdr|7|Daytime|layerFog|40|params|29|alpha|1|0|dist|10|val|3|500||||
   - name: Rainy Day
     data:
-      _value: col|38|r|5|0.252|g|5|0.446|b|3|0.5|a|5|0.293||fog|36|r|5|0.446|g|5|0.494|b|5|0.567|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|1|1|SnM|61|rot|53|x|8|0.647453|y|9|-0.195722|z|8|0.195238|w|8|0.710197|||Rain|5|0.885|Amb|40|r|5|0.566|g|5|0.566|b|5|0.566|a|5|0.886||SunInten|4|1.53|atten|32|b|20|b|14|lm|1|0|sp|1|1|||f|1|1||ArtLights|1|n|hdr|6|Cloudy|layerFog|44|params|33|alpha|5|0.522|dist|10|val|3|500||||
+      _value: col|40|r|5|0.496|g|5|0.691|b|5|0.745|a|5|0.293||fog|36|r|5|0.446|g|5|0.494|b|5|0.567|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|1|0|SnM|61|rot|53|x|8|0.647453|y|9|-0.195722|z|8|0.195238|w|8|0.710197|||Rain|1|1|Amb|40|r|5|0.566|g|5|0.566|b|5|0.566|a|5|0.886||SunInten|4|1.53|atten|32|b|20|b|14|lm|1|0|sp|1|1|||f|1|1||ArtLights|1|n|hdr|6|Cloudy|layerFog|40|params|29|alpha|1|1|dist|10|val|3|500||||
   - name: Contrast Test
     data:
       _value: col|40|r|5|0.664|g|5|0.383|b|5|0.237|a|5|1.752||fog|35|r|5|0.303|g|4|0.34|b|5|0.387|a|1|1||maxFrms|3|500|ml|9|a|4|0.49||stars|1|0|Shad|1|1|SnM|60|rot|52|x|8|0.197402|y|7|0.85955|z|9|-0.192665|w|8|0.430216|||Rain|1|0|Amb|0||SunInten|3|1.3|atten|35|b|20|b|14|lm|1|0|sp|1|1|||f|4|1.73||ArtLights|1|n|hdr|6|Sunset|layerFog|45|params|34|vis|8|val|1|0||dist|10|val|3|500||||

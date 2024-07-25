@@ -60,6 +60,7 @@ Shader "Unlit/Fog Layers Baking"
 
             inline float GetSceneDepth(float2 uv)
             {
+                //return tex2Dlod(_CameraDepthTexture,float4(uv, 0,0));
 	            return tex2Dlod(qc_DepthMax, float4(uv, 0,0));
             }
 

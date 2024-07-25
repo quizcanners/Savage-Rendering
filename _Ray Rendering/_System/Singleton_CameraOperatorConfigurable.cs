@@ -9,7 +9,7 @@ namespace QuizCanners.Utils
     [AddComponentMenu(QcUtils.QUIZCANNERS + "/Camera Operator Configurable")]
     public class Singleton_CameraOperatorConfigurable : Singleton_CameraOperatorGodMode, ICfgCustom, ILinkedLerping
     {
-        [SerializeField] private QcMath.DynamicRangeFloat _height = new(0.001f, 10, 0.2f);
+        [SerializeField] private QcMath.DynamicRangeFloat _height = new(0.01f, 10, 0.2f);
         [SerializeField] private DepthTextureMode _depthTextureMode = DepthTextureMode.None;
         [SerializeField] private bool _overrideDepthTextureMode;
 
@@ -109,7 +109,7 @@ namespace QuizCanners.Utils
             float clip = DesiredCameraNearClip();
             _adjustedPosition = transform.position - camTf.forward * clip;
             camTf.position = _adjustedPosition;
-            _mainCam.nearClipPlane = clip * Mathf.Clamp(1 - offsetClip, 0.01f, 0.99f);
+            _mainCam.nearClipPlane = clip * Mathf.Clamp(1 - offsetClip01, 0.01f, 0.99f);
             _mainCam.farClipPlane = clip + _mainCam.farClipPlane - clip;// CameraClipDistance;
         }
 
@@ -331,7 +331,7 @@ namespace QuizCanners.Utils
 
                     "Clip Distance (Debug): {0}".F(DesiredCameraNearClip()).PegiLabel().Nl();
 
-                    "Offset Clip".PegiLabel(90).Edit(ref offsetClip, 0.01f, 0.99f).Nl();
+                    "Offset Clip".PegiLabel(90).Edit(ref offsetClip01, 0.01f, 0.99f).Nl();
 
               
 
