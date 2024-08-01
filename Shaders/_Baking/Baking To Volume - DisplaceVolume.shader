@@ -70,7 +70,7 @@
 				//float4 vol = SampleVolume(_MainTex, worldPos, outOfBounds);
 
 				vol *= (1 - outOfBounds);
-				vol *= 0.5;
+				//vol *= 0.5;
 				
 				return vol;
 			}

@@ -154,9 +154,19 @@
 				forNormal.y = 0;
 				forNormal = normalize(forNormal);
 
-				float3 normal = (cross(float3(0, 1, 0), -forNormal) * offUv.x); // X component
+			
+
+				float3 normal = cross(float3(0, 1, 0), forNormal) * offUv.x; // X component
+
+				
+
 				normal.y = offUv.y;
-				normal = normalize(normal);
+				//normal.z = 1-normal.x;
+				normal = lerp(i.viewDir.xyz, normalize(normal), length(offUv)*2);
+
+				
+
+			//	return float4(normal, 1);
 
 				float4 col = i.color;
 
@@ -173,6 +183,8 @@
 				
 				shadow *= topShadow;
 				
+				
+
 				col.rgb = TransparentLightStandard(col, i.worldPos, normal, i.viewDir, shadow);
 
 				ApplyBottomFog(col.rgb, i.worldPos.xyz, i.viewDir.y);

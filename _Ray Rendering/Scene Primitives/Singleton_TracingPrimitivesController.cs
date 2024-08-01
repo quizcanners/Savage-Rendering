@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
 using PainterTool;
 
 namespace QuizCanners.VolumeBakedRendering
@@ -59,7 +58,8 @@ namespace QuizCanners.VolumeBakedRendering
                     if (!arrangementDirty && !volumeDirty)
                         break;
 
-                    if (arrangementDirty)
+                    // Don't rebake stuff when more of the level is loaded.
+                    if (arrangementDirty && !Application.isPlaying)
                         _restartBakeRequest.CreateRequest();
 
                         _updateState = ShapesUpdateState.Gouping;
@@ -90,7 +90,7 @@ namespace QuizCanners.VolumeBakedRendering
                             return;
                         }
 
-                        var count = Mathf.Min(GeometryObjectArray.MAX_ELEMENTS_COUNT, sortedForShape.Count);
+                        var count = Mathf.Min(MAX_ELEMENTS_COUNT, sortedForShape.Count);
 
                         shapes = new SortedElement[count];
 

@@ -73,6 +73,9 @@ Shader "QcRendering/Terrain/Integration Blanket"
 
             #pragma multi_compile ___ _qc_WATER
 
+            #pragma shader_feature_local _REFLECTIVITY_PLASTIC _REFLECTIVITY_OFF
+
+
             struct v2f
             {
                 float4 pos			: SV_POSITION;
@@ -228,7 +231,7 @@ Shader "QcRendering/Terrain/Integration Blanket"
 				precomp.fresnel = fresnel;
 				precomp.tex = tex;
 				
-				precomp.reflectivity = 1;
+				precomp.reflectivity = TERRAIN_GLOSS;
 				precomp.metal = metal;
 				precomp.traced = 0;
 				precomp.water = 0;

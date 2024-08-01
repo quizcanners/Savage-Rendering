@@ -30,7 +30,7 @@ float3 GetReflection_ByMaterialType(MaterialParameters input, float3 normal, flo
 	float3 reflectedRay = reflect(-viewDir, normal);
 
 	//ModifySpecularByAO(input.smoothsness, input.ao);
-
+	//input.fresnel *= 0.8;
 
 	float normError = sharpstep(0.2, 0.01, dot(reflectedRay, rawNormal));
 	float3 reflFix = reflect(-viewDir,rawNormal);

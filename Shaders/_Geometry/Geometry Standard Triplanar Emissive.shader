@@ -272,7 +272,7 @@ Shader "QcRendering/Geometry/Emissive Triplanar"
 
 // ********************* LIGHT
 
-					float fresnel = GetFresnel_FixNormal(normal, i.normal.xyz, viewDir) * ao;//GetFresnel(normal, viewDir) * ao;
+					float fresnel = GetFresnel_FixNormal(normal, i.normal.xyz, viewDir);//GetFresnel(normal, viewDir) * ao;
 
 					float metal = madsMap.r;
 					float specular = madsMap.a; // GetSpecular(madsMap.a, fresnel * _Reflectivity, metal);
@@ -284,7 +284,7 @@ Shader "QcRendering/Geometry/Emissive Triplanar"
 
 					float smoothFresnel = smoothstep(0,1, dot(viewDir, i.normal.xyz));
 
-					_EmissionColor.rgb *= _EmissionColor.a * lerp(1, tex.rgb, _Multiply);
+					_EmissionColor.rgb *= _EmissionColor.a * (pow(1-madsMap.g,2) + (1-fresnel)) * lerp(1, tex.rgb, _Multiply);
 
 				
 					float overlay = ao; // + ao)*smoothFresnel;
@@ -294,7 +294,7 @@ Shader "QcRendering/Geometry/Emissive Triplanar"
 						tex.rgb = lerp(tex.rgb, _EdgeColor.rgb, edgeColorVisibility);
 					#endif*/
 
-					float3 col =  lerp(_EmissionColor.rgb, tex.rgb * ambientLight, overlay * 0.5);
+					float3 col =  tex.rgb * ambientLight + _EmissionColor.rgb; //lerp(_EmissionColor.rgb, tex.rgb * ambientLight, overlay * 0.5);
 
 				
 			

@@ -52,7 +52,7 @@ void ResampleBakedLight(inout float3 col, inout float3 gatherLight, float3 pos, 
 		float gatheredDiffuse = 0;
 
 		gatheredDiffuse += postEffect.rgb * ao * (1-outOfBounds);
-		gatheredDiffuse += RESAMPLE_COEFFICIENT * SampleVolume_CubeMap_Internal(pos, normal);
+		//gatheredDiffuse += RESAMPLE_COEFFICIENT * SampleVolume_CubeMap_Internal(pos, normal);
 		gatherLight += col.rgb * gatheredDiffuse * roughness;
 
 	#endif
@@ -91,6 +91,8 @@ float GetSpecularAttenuation(float3 rd, float3 normal, float roughness, float3 l
 }
 
 
+
+
 float4 render(in float3 ro, in float3 rd, in float4 seed) 
 {
 	const float MIN_DIST = 0.000001;
@@ -112,10 +114,8 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 	float3 directional = GetDirectional();
 	
 
-#if !RT_DENOISING //&& !RT_TO_CUBEMAP
 	for (int i = 0; i < PATH_LENGTH; ++i)
 	{
-#endif
 		
 		float3 res = worldhit(ro, rd, float2(MIN_DIST, MAX_DIST_EDGE), normal, mat);
 		roughness = mat.a;
@@ -126,16 +126,6 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 		// res.z = material
 
 		rayHitDist = res.y;
-
-		/*
-#if RT_DENOISING
-
-		distance = isFirst ?
-			rayHitDist +
-			dot(rd, normal)
-			: distance;
-		isFirst = false;
-#endif*/
 
 		if (res.z <= 0.)
 		{
@@ -154,40 +144,10 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 
 		ro += rd * rayHitDist;
 
-		//float3 postColor;
-		//float postAo;
-		//SamplePostEffects(ro - rd*0.01, normal, postColor, postAo, seed);
-		//gatherLight += postColor * col * albedo;
-		//col *= postAo;
-
 		col *= smoothstep(0, FADE_RAY_AT, rayHitDist);
 
 
-		ResampleBakedLight_Cascade(col,  gatherLight, randomLinePoint, rd, rndPointWeight);
 
-/*
-#if RT_TO_CUBEMAP && _qc_IGNORE_SKY
-	
-	//UNITY_FLATTEN
-	if (type < EMISSIVE + 1 &&  type >= EMISSIVE ) 
-	{	
-		return float4(col * albedo + gatherLight, distance);
-	} else 
-	{
-
-		ResampleBakedLight_Specular(col, gatherLight, ro, normal, rd, roughness);
-
-		col *= albedo;
-
-		ResampleBakedLight(col, gatherLight, ro, normal, roughness); 
-
-		col = 0; // We don't hit any emissive surface
-
-		return float4(col + gatherLight, distance);
-	}
-
-#endif
-*/
 
 
 			/*
@@ -284,7 +244,7 @@ if (type < DIELECTRIC + 0.5)
 					{
 						float toSUn = smoothstep(0, -1, dot(qc_SunBackDirection.xyz, normal));
 
-                    float shadow = 1; //GetSunShadowsAttenuation(ro);
+						float shadow = 1; //GetSunShadowsAttenuation(ro);
 
 						if (shadow > 0.2 && Raycast(ro + normal*0.001, qc_SunBackDirection.xyz + (seed.zyx-0.5)*0.3, float2(0.0001, MAX_DIST_EDGE)))
 						{
@@ -292,20 +252,6 @@ if (type < DIELECTRIC + 0.5)
 						}
 
 						gatherLight.rgb += col.rgb * albedo * directional * (1 + toSUn * 16) * shadow;
-
-						/*
-						if (!Raycast(ro + normal * 0.001, qc_SunBackDirection.xyz + (seed.zyx - 0.5) * 0.3, float2(0.0001, MAX_DIST_EDGE)))
-						{
-							
-						
-							col *= albedo;
-							//col.rgb *= directional * (1 + toSUn * 16);
-
-							gatherLight.rgb += col.rgb * albedo * directional * (1 + toSUn * 16);
-
-							return float4(gatherLight, distance);
-						}
-						*/
 					}
 					#endif
 			}
@@ -355,35 +301,8 @@ else
 					ro += (dist + 0.001) * rd;
 				}
 			}
-}
-		
-
-#if !RT_DENOISING //&& !RT_TO_CUBEMAP
-	}
-#endif
-
-/*
-	float3 light = 0; 
-	
-	
-	#if !qc_NO_VOLUME
-		float outOfBounds;
-		light += SampleVolume(_RayMarchingVolume, ro + normal * _RayMarchingVolumeVOLUME_POSITION_N_SIZE.w, outOfBounds).rgb * (1 - outOfBounds);
-	#endif
-	*/
-
-	/*
-	#if !_qc_IGNORE_SKY
-		if (_qc_SunVisibility>0) 
-		{
-			float shadow = GetSunShadowsAttenuation(ro);//SampleRayShadowAndAttenuation(ro, normal);
-			light += directional * shadow;
 		}
-	#endif
-	
-	col.rgb *= light;
-	*/
+	}
 
 	return float4( gatherLight, distance);
-
 }

@@ -74,9 +74,9 @@ namespace QuizCanners.VolumeBakedRendering
 
         public void SetBakingDirty(string reason, bool invalidateResult)
         {
-            _setDirtyReason = reason;
             VolumeTracing.SceneVersion++;
-
+            _setDirtyReason = reason + " V." + VolumeTracing.SceneVersion;
+         
             if (invalidateResult)
             {
                 _clearBakeRequest.CreateRequest();
@@ -139,7 +139,7 @@ namespace QuizCanners.VolumeBakedRendering
                 }
             }
 
-            if (_sceneSetupDoneGate.TryChange(sceneSetupDone)) 
+            if (!Application.isPlaying && _sceneSetupDoneGate.TryChange(sceneSetupDone)) 
             {
                 SetBakingDirty(reason: "General Lerp Done", invalidateResult: true);
             }

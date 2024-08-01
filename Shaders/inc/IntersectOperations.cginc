@@ -31,6 +31,9 @@
 // Disk:            https://www.shadertoy.com/view/lsfGDB
 //
 
+#ifndef QC_INT_OPS
+#define QC_INT_OPS
+
 #include "RayMathHelpers.cginc"
 
 #define MAX_DIST 10000//1e10
@@ -1188,8 +1191,8 @@ float FresnelSchlickRoughness(float cosTheta, float F0, float roughness) {
 }
 
 float3 randomSpherePoint(float4 rand) {
-	float PI = 3.14159265359;
-	float ang1 = (rand.x) * 2 * PI; // [-1..1) -> [0..2*PI)
+	//float PI = 3.14159265359;
+	float ang1 = (rand.x) * 2 * 3.14159265359; // [-1..1) -> [0..2*PI)
 	float u = (rand.y - 0.5) * 2; // [-1..1), cos and acos(2v-1) cancel each other out, so we arrive at [-1..1)
 	float u2 = u * u;
 	float sqrt1MinusU2 = sqrt(1 - u2);
@@ -1201,9 +1204,9 @@ float3 randomSpherePoint(float4 rand) {
 
 float3 randomDiskPoint(float4 rand, float3 n)
 {
-	float PI = 3.14159265359;
+	//float PI = 3.14159265359;
 	float r = rand.x;
-	float angle = (rand.y) * 2 * PI;
+	float angle = (rand.y) * 2 * 3.14159265359;
 	float sr = sqrt(r);
 	float2 p = float2(sr * cos(angle), sr * sin(angle));
 	float3 tangent = normalize((rand.yxz - 0.5) * 2);
@@ -1332,3 +1335,6 @@ inline float3 Mix(float3 a, float3 b, float3 p) {
 inline float Mix(float a, float b, float p) {
 	return a * (1 - p) + b * p;
 }
+
+
+#endif

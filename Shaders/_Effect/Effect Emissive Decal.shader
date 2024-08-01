@@ -1,4 +1,4 @@
-﻿Shader "QcRendering/Effect/Emissive"
+﻿Shader "QcRendering/Effect/Emissive Decal"
 {
 	Properties{
 	   _MainTex("Particle Texture", 2D) = "white" {}

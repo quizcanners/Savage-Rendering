@@ -10,11 +10,16 @@ namespace QuizCanners.VolumeBakedRendering
 {
     public static partial class TracingPrimitives
     {
+        // TODO: Reduce the main box size to potentially group out
+        internal const int MAX_BOUNDING_BOXES_COUNT = 64; // Modify ARRAY_BOX_COUNT in PrimitiveScenes.cginc
+        public const int MAX_ELEMENTS_COUNT = 256; // Modify ARRAY_SIZE in PrimitiveScenes.cginc
+        internal const int MAX_BINARY_TREE_BOXES_COUNT = 64; // Modify BINARY_TREE_SIZE
+       
+
         [Serializable]
         internal class GeometryObjectArray : IGotName, IPEGI, IPEGI_Handles
         {
-            public const int MAX_ELEMENTS_COUNT = 64;
-
+           
             [SerializeField] private string _parameterName;
             [SerializeField] public Shape ShapeToReflect = Shape.Cube;
 
@@ -25,11 +30,20 @@ namespace QuizCanners.VolumeBakedRendering
             ShaderProperty.VectorArrayValue _colorAndRoughness;
             ShaderProperty.VectorArrayValue _rotation;
 
-            ShaderProperty.VectorValue _boundingPositionAll;
-            ShaderProperty.VectorValue _boundingExtendsAll; // W is Boxes count
+            ShaderProperty.VectorValue _boundingBox_Position;
+            ShaderProperty.VectorValue _boundingBox_Size; // W is Boxes count
 
-            ShaderProperty.VectorArrayValue _boundingPosition;
-            ShaderProperty.VectorArrayValue _boundingExtents;
+            ShaderProperty.VectorArrayValue _boundingBoxes_Positions;
+            ShaderProperty.VectorArrayValue _boundingBoxes_Sizes;
+
+            
+            // 0,1 - first branch, second branch. Negative - inverse index of the leaf - 1
+            ShaderProperty.VectorArrayValue _binaryTree_Position; // W is first Branch/Leaf 
+            ShaderProperty.VectorArrayValue _binaryTree_Sizes; // W is second Branch/Leaf
+            ShaderProperty.VectorValue _binaryTree_Count;
+
+
+            private int _totalBoxes;
 
             private readonly Gate.Bool _setInShader = new();
 
@@ -41,6 +55,21 @@ namespace QuizCanners.VolumeBakedRendering
             readonly Vector4[] boundingPosition = new Vector4[MAX_BOUNDING_BOXES_COUNT];
             readonly Vector4[] boundingExtents = new Vector4[MAX_BOUNDING_BOXES_COUNT];
 
+
+            //16 16                 2
+            //8 8 8 8               4
+            //4 4 4 4 4 4 4 4       8
+            //2 2 2 2 2 2 2 2  ... 16
+            //30
+
+            // Binary tree
+
+        
+
+            readonly Vector4[] binaryTree_Positions = new Vector4[MAX_BINARY_TREE_BOXES_COUNT];
+            readonly Vector4[] binaryTree_Sizes = new Vector4[MAX_BINARY_TREE_BOXES_COUNT];
+
+            private BinaryTreeBranch _binaryTreePartition;
 
             readonly BoundingBoxCalculator _allElementsBox = new();
             private readonly List<BoundingBox> elementsToGroup = new();
@@ -56,6 +85,47 @@ namespace QuizCanners.VolumeBakedRendering
 
             private enum BoxesSortingStage { Uninitialized, JobStarted, Completed }
 
+            void GenerateBinarySearchTree()
+            {
+                // _totalBoxes
+
+                // _boundingPositionAll.GlobalValue = _allElementsBox.Center;
+                //  _boundingExtendsAll.GlobalValue = _allElementsBox.Extents.ToVector4(boxIndex);//elementsToGroup.Count);
+
+                //  _boundingPosition.GlobalValue = boundingPosition;
+                // _boundingExtents.GlobalValue = boundingExtents;
+
+                if (_totalBoxes > 1)
+                {
+                    _binaryTreePartition = new(center: _allElementsBox.Center, size: _allElementsBox.Size);
+
+                    for (int i = 0; i < _totalBoxes; i++)
+                    {
+                        var leaf = new Leaf
+                        {
+                            Box = new BoundingBoxCalculator
+                            {
+                                Center = boundingPosition[i],
+                                Size = boundingExtents[i]
+                            },
+                            index = i
+                        };
+
+                        _binaryTreePartition.Consume(leaf);
+                    }
+
+                    int nodeIndex = 0;
+                    _binaryTreePartition.IndexNodes(ref nodeIndex);
+                    _binaryTreePartition.GenerateTree(binaryTree_Positions, binaryTree_Sizes);
+
+                    _binaryTree_Position.GlobalValue = binaryTree_Positions;
+                    _binaryTree_Sizes.GlobalValue = binaryTree_Sizes;
+                    _binaryTree_Count.GlobalValue = new Vector4(nodeIndex, 0, 0, 0);
+                }
+            }
+
+
+
             private void InitializeIfNotInitialized()
             {
                 if (_setInShader.TryChange(true))
@@ -64,11 +134,16 @@ namespace QuizCanners.VolumeBakedRendering
                     _size = new(_parameterName + "_Size");
                     _colorAndRoughness = new(_parameterName + "_Mat");
                     _rotation = new(_parameterName + "_Rot");
-                    _boundingPosition = new(_parameterName + "_BoundPos");
-                    _boundingExtents = new(_parameterName + "_BoundSize");
+                    _boundingBoxes_Positions = new(_parameterName + "_BoundPos");
+                    _boundingBoxes_Sizes = new(_parameterName + "_BoundSize");
 
-                    _boundingPositionAll = new(_parameterName + "_BoundPos_All");
-                    _boundingExtendsAll = new(_parameterName + "_BoundSize_All");
+                    _boundingBox_Position = new(_parameterName + "_BoundPos_All");
+                    _boundingBox_Size = new(_parameterName + "_BoundSize_All");
+
+                    _binaryTree_Position = new(_parameterName + "_BinaryTree_PosNL");
+                    _binaryTree_Sizes = new(_parameterName + "_BinaryTree_SizeNR");
+                    _binaryTree_Count = new(_parameterName + "_BinaryTree_Count"); ;
+
                 }
             }
 
@@ -145,7 +220,7 @@ namespace QuizCanners.VolumeBakedRendering
                 _sortingStage = BoxesSortingStage.Uninitialized;
             }
 
-            #region ViaJobs
+            #region Jobs
 
             private void DisposeJob()
             {
@@ -221,6 +296,8 @@ namespace QuizCanners.VolumeBakedRendering
                     };
 
                     _jobMeta = new NativeArray<BoxJobMeta>(1, Allocator.Persistent);
+
+                    _jobMeta[0] = meta;
 
                     job = new BoxesJob(boxesForJob, _jobMeta);
                 }
@@ -323,6 +400,7 @@ namespace QuizCanners.VolumeBakedRendering
 
                 int boxIndex = 0;
 
+                // Elements from defined boxes
                 foreach (var group in elementsPreGrouped) 
                 {
                     var list = group.Value;
@@ -371,16 +449,29 @@ namespace QuizCanners.VolumeBakedRendering
                     boxIndex++;
                 }
 
-                _boundingPositionAll.GlobalValue = _allElementsBox.Center;
-                _boundingExtendsAll.GlobalValue = _allElementsBox.Extents.ToVector4(elementsToGroup.Count);
+                // Boxes
 
-                _boundingPosition.GlobalValue = boundingPosition;
-                _boundingExtents.GlobalValue = boundingExtents;
+                _totalBoxes = boxIndex;
 
+                _boundingBox_Position.GlobalValue = _allElementsBox.Center;
+                _boundingBox_Size.GlobalValue = _allElementsBox.Extents.ToVector4(boxIndex);//elementsToGroup.Count);
+
+                _boundingBoxes_Positions.GlobalValue = boundingPosition;
+                _boundingBoxes_Sizes.GlobalValue = boundingExtents;
+
+                // Elements
                 _positionAndMaterial.GlobalValue = positionArray;
                 _size.GlobalValue = sizeArray;
                 _colorAndRoughness.GlobalValue = colorArray;
                 _rotation.GlobalValue = rotationArray;
+
+                try
+                {
+                    GenerateBinarySearchTree();
+                } catch (Exception ex) 
+                {
+                    Debug.LogException(ex);
+                }
             }
 
 
@@ -408,7 +499,11 @@ namespace QuizCanners.VolumeBakedRendering
                         "Name".PegiLabel().Edit_Delayed(ref _parameterName).Nl(()=> _setInShader.ValueIsDefined = false);
                       //  "Rotation".PegiLabel().ToggleIcon(ref SupportsRotation).Nl();
                     }
-                    "Registered primitives".PegiLabel().Edit_Array(ref SortedElements).Nl();
+
+                    if ("Registered Primitives [{0}]".F(SortedElements.Length).PegiLabel().IsEntered().Nl())
+                    {
+                        "Sorted elements".PegiLabel().Edit_Array(ref SortedElements).Nl();
+                    }
 
                     if (context.IsCurrentEntered)
                     {
@@ -425,7 +520,6 @@ namespace QuizCanners.VolumeBakedRendering
 
                     if ("Boxes Job".PegiLabel().IsEntered().Nl()) 
                     {
-
                         switch (_sortingStage) 
                         {
                             case BoxesSortingStage.Uninitialized:
@@ -469,6 +563,26 @@ namespace QuizCanners.VolumeBakedRendering
                                 break;
                         }
 
+                        
+
+                    }
+
+                    if ("Binary tree partition".PegiLabel().IsEntered().Nl())
+                    {
+                        pegi.Click(GenerateBinarySearchTree).Nl();
+
+                        if (_binaryTreePartition != null && "Clear the tree".PegiLabel().Click().Nl())
+                            _binaryTreePartition = null;
+
+
+                        if (_binaryTree_Count.GlobalValue.x > 0)
+                        {
+                            int count = (int)_binaryTree_Count.GlobalValue.x;
+                            for (int i= 0; i < count; i++) 
+                            {
+                                "({0}, {1})".F(binaryTree_Positions[i].w, binaryTree_Sizes[i].w).PegiLabel().Nl();
+                            }
+                        }
 
                     }
                 }
@@ -476,16 +590,24 @@ namespace QuizCanners.VolumeBakedRendering
 
             public void OnSceneDraw()
             {
+
+                if (_binaryTreePartition != null)
+                {
+                    _binaryTreePartition.OnSceneDraw_Nested();
+                    return;
+                }
+
+                /*
                 _allElementsBox.OnSceneDraw_Nested();
 
                 foreach (var b in elementsToGroup)
-                    b.OnSceneDraw_Nested();
+                    b.OnSceneDraw_Nested();*/
 
-                /*
-                for (int i = 0; i < MAX_BOUNDING_BOXES_COUNT; i++)
+                
+                for (int i = 0; i < _totalBoxes; i++)
                 {
-                    pegi.Handle.DrawWireCube(boundingPosition[i], boundingExtents[i]);
-                }*/
+                    pegi.Handle.DrawWireCube(boundingPosition[i], boundingExtents[i] * 2);
+                }
             }
 
             #endregion

@@ -45,7 +45,10 @@ Shader "QcRendering/Terrain/Integration Triplanar"
             #pragma multi_compile ___ _qc_USE_RAIN 
 			#pragma multi_compile qc_NO_VOLUME qc_GOT_VOLUME 
 			#pragma multi_compile ___ _qc_IGNORE_SKY 
-            #pragma multi_compile ___ qc_USE_TERRAIN
+           #pragma multi_compile ___ qc_USE_TERRAIN
+
+            #pragma shader_feature_local _REFLECTIVITY_PLASTIC _REFLECTIVITY_OFF
+
 
             #include "Qc_TerrainCommon.cginc"
             #include "UnityCG.cginc"
@@ -89,7 +92,7 @@ Shader "QcRendering/Terrain/Integration Triplanar"
           
             UNITY_DECLARE_TEX2D(_MadsBig);
             UNITY_DECLARE_TEX2D(_BumpMapBig);
-            //Texture2D _BumpMapBig;
+           // Texture2D _BumpMapBig;
            // Texture2D _MadsBig;
            // SamplerState sampler_MadsBig;
             float _BlendHeight;
@@ -121,23 +124,28 @@ Shader "QcRendering/Terrain/Integration Triplanar"
                //  float4 madsMapObj = tex2D(_SpecularMap, i.texcoord);
 
                  float4 madsBig = UNITY_SAMPLE_TEX2D(_MadsBig,  i.texcoord);//_MadsBig.Sample(sampler_MadsBig, i.texcoord);
-                 float3 bumpBig = UNITY_SAMPLE_TEX2D(_BumpMapBig, i.texcoord);
+                 float3 bumpBig = UnpackNormal(UNITY_SAMPLE_TEX2D(_BumpMapBig, i.texcoord));
                  //UnpackNormal(_BumpMapBig.Sample(sampler_MadsBig, i.texcoord));
                  
                  float3 normal = i.normal.xyz;
                  ApplyTangent (normal, bumpBig, i.wTangent);
+
+       //   return float4(i.normal.xyz, 1);
+
 
                  float3 tex;
                  float3 objNormalTrip;
                  float4 madsMapObj;
                  TriplanarSampling(i.worldPos, i.normal.xyz, tex, objNormalTrip, madsMapObj);
 
+               //  return float4(objNormalTrip, 1);
+
                  float3 rawNormal = i.normal.xyz;
 
                  float ao =1;
 
                  float4 madsMap;
-
+                 
                  #if qc_USE_TERRAIN
                      float forcedShowTerrain;
                      float showTerrain;
@@ -179,6 +187,8 @@ Shader "QcRendering/Terrain/Integration Triplanar"
 
          //      return ao;
 
+          
+
               //  ao = 1;
            
                 float metal =  madsMap.r;
@@ -191,7 +201,7 @@ Shader "QcRendering/Terrain/Integration Triplanar"
 				precomp.fresnel = fresnel;
 				precomp.tex = tex;
 				
-				precomp.reflectivity = 0.5;
+				precomp.reflectivity = TERRAIN_GLOSS;
 				precomp.metal = metal;
 				precomp.traced = 0;
 				precomp.water = 0;
@@ -206,8 +216,10 @@ Shader "QcRendering/Terrain/Integration Triplanar"
 
 				ApplyBottomFog(col, i.worldPos.xyz, viewDir.y);
 
-              // col.rgb = ao;
+              //  col.rgb = lerp(col.rgb, rawNormal, 0.9);
 
+              // col.rgb = ao;
+               // col = normal;
                 return float4(col,1);
             }
 

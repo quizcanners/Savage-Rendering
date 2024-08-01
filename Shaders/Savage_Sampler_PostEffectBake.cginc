@@ -60,11 +60,11 @@ void SamplePostEffects(float3 pos, out float3 col, out float3 aoColor, out float
 	float DISTANCE_FADE_POWER = GetDistanceFadeCoeeficient();
 	float Brighness = GetPropagationBrightnessCoeeficient();
 	
-	for (int i =0; i<PostRtx_PointLight_Count; i++)	{
-		float3 lightPos = PostRtx_PointLight_Pos[i];	
+	for (int pli =0; pli<PostRtx_PointLight_Count; pli++)	{
+		float3 lightPos = PostRtx_PointLight_Pos[pli];	
 		if (Raycast(pos, lightPos))
 			continue;
-		float3 lightCol = PostRtx_PointLight_Color[i];
+		float3 lightCol = PostRtx_PointLight_Color[pli];
 
 		col += farEnough * Brighness * lightCol / (1 + pow(length(pos-lightPos),DISTANCE_FADE_POWER));
 	}

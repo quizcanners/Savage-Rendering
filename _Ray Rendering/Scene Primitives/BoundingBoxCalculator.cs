@@ -71,6 +71,19 @@ namespace QuizCanners.VolumeBakedRendering
             Max = Vector3.Max(Max, center + extents);
         }
 
+        public bool Contains(BoundingBoxCalculator other, out float addedVolume) 
+        {
+            var volume = Volume;
+            var newMin = Vector3.Min(Min, other.Min);
+            var newMax = Vector3.Max(Max, other.Max);
+            var newSize = newMax - newMin;
+            var newVolume = newSize.x * newSize.y * newSize.z;
+
+            addedVolume = newVolume - volume;
+
+            return Mathf.Approximately(volume, newVolume);
+        }
+
         public float GetEncapsulationEfficiency(BoundingBoxCalculator other, float coefficient) 
         {
             var volume = Volume;

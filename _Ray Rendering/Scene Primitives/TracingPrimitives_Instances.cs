@@ -100,6 +100,12 @@ namespace QuizCanners.VolumeBakedRendering
 
                 foreach (var ind in byShapeIndexes)
                 {
+                    if (ind > s_instances.Count) 
+                    {
+                        Debug.LogError("Index [{0}] is above the collection Count [{1}]".F(ind, s_instances.Count));
+                        break;
+                    }
+
                     var el = s_instances[ind];
 
                     if (!el.EnvironmentElement)

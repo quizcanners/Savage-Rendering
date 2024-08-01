@@ -65,9 +65,6 @@ namespace QuizCanners.SpecialEffects
         private readonly ShaderProperty.TextureValue _downscaledDepth = new("qc_DepthMax");
         private readonly ShaderProperty.TextureValue _finalResult = new("qc_FogLayers");
 
-
- 
-
         private CommandBuffer cmdBakeBuffer;
         private CommandBuffer cmdDrawBuffer;
 
@@ -124,13 +121,11 @@ namespace QuizCanners.SpecialEffects
             if (!Application.isPlaying)
                 return;
 
-            bool shouldRender = _settings.Visibility > 0.01;
-
             _settings.ManagedUpdate();
 
             SetMatrix();
 
-            if (!shouldRender) 
+            if (_settings.ActualVisibility <= 0) 
             {
                 Clear();
                 return;
@@ -258,32 +253,22 @@ namespace QuizCanners.SpecialEffects
 
             private float _targetVisibility;
 
-            private bool targetSet;
-
             private float Visibility_Internal
             {
                 get => _visibility.latestValue;
                 set => _visibility.GlobalValue = value;
             }
 
-            public float Visibility
+            public float ActualVisibility
             {
-                get => _targetVisibility;
-                set
-                {
-                    _targetVisibility = value;
-                    if (!targetSet || !Application.isPlaying)
-                    {
-                        Visibility_Internal = value;
-                        targetSet = true;
-                    }
-                }
+                get => _visibility.latestValue;
+                set => _visibility.GlobalValue = value;
             }
 
             public void Hide() 
             {
                 Visibility_Internal = 0;
-                Visibility = 0;
+                _targetVisibility = 0;
             }
 
             public float Distance
@@ -299,13 +284,16 @@ namespace QuizCanners.SpecialEffects
             public void DecodeInternal(CfgData data)
             {
                 this.DecodeTagsFrom(data);
+
+                if (!Application.isPlaying)
+                    Visibility_Internal = _targetVisibility;
             }
 
             public void DecodeTag(string key, CfgData data)
             {
                 switch (key) 
                 {
-                    case "alpha": _targetVisibility = data.ToFloat(); targetSet = true; break;
+                    case "alpha": _targetVisibility = data.ToFloat(); break;
                     case "dist": _distance.Decode(data); break;
                 }
             }
@@ -320,17 +308,15 @@ namespace QuizCanners.SpecialEffects
             #region Inspector
             public void Inspect()
             {
-                "Visibility".PegiLabel().Edit_01(ref _targetVisibility).Nl(()=> Visibility = _targetVisibility);
+                "Visibility".PegiLabel().Edit_01(ref _targetVisibility).Nl(()=> ActualVisibility = _targetVisibility);
                 _distance.Nested_Inspect().Nl();
             }
 
             public void InspectInList(ref int edited, int index)
             {
-                var vis = Visibility;
+                "Layered Fog".PegiLabel(90).Edit_01(ref _targetVisibility).OnChanged(()=> ActualVisibility = _targetVisibility);
 
-                "Layered Fog".PegiLabel(90).Edit_01(ref vis).OnChanged(()=> Visibility = vis);
-
-                if (vis>0 && Distance < 1) 
+                if (_targetVisibility > 0 && Distance < 1) 
                 {
                     Icon.Warning.Draw("Distance is too small");
                     "Set Distance 500".PegiLabel().Click(()=> Distance = 500);
@@ -344,13 +330,13 @@ namespace QuizCanners.SpecialEffects
 
             internal void ManagedUpdate()
             {
+
                 if (Visibility_Internal != _targetVisibility)
-                    Visibility_Internal = QcLerp.LerpBySpeed(Visibility_Internal, _targetVisibility, 1, unscaledTime: true);
+                    Visibility_Internal = QcLerp.LerpBySpeed(Visibility_Internal, _targetVisibility, 0.1f, unscaledTime: true);
             }
 
             internal void ManagedOnEnable() 
             {
-                if (!Application.isPlaying || Visibility < 0.01)
                     Hide();
             }
 

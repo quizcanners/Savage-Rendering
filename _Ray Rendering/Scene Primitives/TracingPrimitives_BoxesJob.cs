@@ -9,7 +9,7 @@ namespace QuizCanners.VolumeBakedRendering
 {
     public static partial class TracingPrimitives
     {
-        internal const int MAX_BOUNDING_BOXES_COUNT = 8;
+       
 
         struct Efficiency
         {
@@ -50,7 +50,9 @@ namespace QuizCanners.VolumeBakedRendering
                 bool anyEncapsulated;
                 var meta = _meta[0];
 
-                while (_remaining > meta.MaxVoundingBoxesCount && counter < 1000)
+                int encapsulationCount = math.min(meta.MaxVoundingBoxesCount, _remaining/2);
+
+                while (_remaining > encapsulationCount && counter < 1000)
                 {
                     counter++;
 
@@ -65,13 +67,12 @@ namespace QuizCanners.VolumeBakedRendering
                         if (smaller.IsEncapsulaed)
                             continue;
 
-                        if (TryEncapsulate(iSm, ref bestEfficiency))
-                        {
-                            meta.DirectEncapslations++;
-                            anyEncapsulated = true;
-                            _remaining--;
+                        if (!TryEncapsulate(iSm, ref bestEfficiency))
                             continue;
-                        }
+
+                        meta.DirectEncapslations++;
+                        anyEncapsulated = true;
+                        _remaining--;
                     }
 
                     if (anyEncapsulated)

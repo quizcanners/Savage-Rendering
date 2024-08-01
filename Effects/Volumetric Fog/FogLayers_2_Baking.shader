@@ -60,6 +60,10 @@ Shader "Unlit/Fog Layers Baking"
 
             inline float GetSceneDepth(float2 uv)
             {
+                // No need if texture sizes are correct
+               /* uv *= qc_DepthMax_TexelSize.zw;
+                uv = floor(uv) + 0.5;
+                uv *= qc_DepthMax_TexelSize.xy;*/
                 //return tex2Dlod(_CameraDepthTexture,float4(uv, 0,0));
 	            return tex2Dlod(qc_DepthMax, float4(uv, 0,0));
             }

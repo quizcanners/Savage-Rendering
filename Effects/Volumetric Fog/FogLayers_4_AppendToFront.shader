@@ -54,7 +54,7 @@ Shader "Unlit/Append To Front"
 
                 float remainingAlpha = 1;
 
-                float distPower = 3 - qc_LayeredFog_Alpha * 2;
+                float distCurve = 3 - qc_LayeredFog_Alpha * 2;
 
                 // Not accurate method as we increase Alpha over distance, thus increasing the brighntness of previously accumulated samples
 
@@ -63,9 +63,13 @@ Shader "Unlit/Append To Front"
                  
                  int DISTANCE_IMPORTANCE = 6;
 
-                int MAX_DIST_POWER = pow(15,DISTANCE_IMPORTANCE) + 1;//16; //(1 + i)
+                 float MIN_LAYER_ALPHA = 2048;
 
-                float transprencyStep = qc_LayeredFog_Alpha / pow(MAX_DIST_POWER, distPower);
+                int MAX_DIST_POWER = pow(15,DISTANCE_IMPORTANCE) + MIN_LAYER_ALPHA;//16; //(1 + i)
+
+                
+
+                float transprencyStep = qc_LayeredFog_Alpha / pow(MAX_DIST_POWER, distCurve);
 
                 for (float i = 0; i<=index; i++)
                 {
@@ -78,8 +82,10 @@ Shader "Unlit/Append To Front"
 
                     float brightness = checking.a; //* saturate(10 * length(checking.rgb));
 
+                    float DIST_POWER = pow(i,DISTANCE_IMPORTANCE) + MIN_LAYER_ALPHA;
+
                   //  checking.rgb *= checking.a;
-                    float layerAlpha = remainingAlpha * brightness *  transprencyStep * pow(1+pow(i,DISTANCE_IMPORTANCE), distPower);
+                    float layerAlpha = remainingAlpha * brightness *  transprencyStep * pow(DIST_POWER, distCurve);
 
                     remainingAlpha -= layerAlpha;
 

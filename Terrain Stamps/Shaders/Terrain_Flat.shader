@@ -32,6 +32,8 @@ Shader "QcRendering/Terrain/Flat"
 			#pragma multi_compile qc_NO_VOLUME qc_GOT_VOLUME 
 			#pragma multi_compile ___ _qc_IGNORE_SKY 
 
+            #pragma shader_feature_local _REFLECTIVITY_PLASTIC _REFLECTIVITY_OFF
+
             #include "UnityCG.cginc"
 			#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Standard.cginc"
 
@@ -61,7 +63,7 @@ Shader "QcRendering/Terrain/Flat"
             sampler2D _AmbientMap;
             float _BlendHeight;
             float _BlendSharpness;
-
+            sampler2D _CameraDepthTexture;
 
             	struct FragColDepth
 				{
@@ -71,9 +73,23 @@ Shader "QcRendering/Terrain/Flat"
             FragColDepth frag(v2f i)
             //fixed4 frag (v2f i) : SV_Target
             {
-              float3 viewDir = normalize(i.viewDir.xyz);
-            
+             
               float2 screenUv = i.screenPos.xy / i.screenPos.w;
+
+			    float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screenUv);
+			    float sceneZ = LinearEyeDepth(UNITY_SAMPLE_DEPTH(depth));
+			    clip(sceneZ-i.screenPos.z);
+
+                /*
+                if (sceneZ<i.screenPos.z) 
+                {
+                    FragColDepth disca;
+				    disca.depth = 1; // calculateFragmentDepth(i.worldPos + (displacement - 0.5) * viewDir * offsetAmount  * 0.1); // * _HeightOffset);
+				    disca.col =  float4(0,0, 0, 1);
+                    return disca;
+                }*/
+
+ float3 viewDir = normalize(i.viewDir.xyz);
 
               float3 rawNormal;
               float4 control = Ct_SampleTerrainAndNormal(i.worldPos, rawNormal);
@@ -123,7 +139,7 @@ Shader "QcRendering/Terrain/Flat"
 				precomp.fresnel = fresnel;
 				precomp.tex = tex;
 				
-				precomp.reflectivity = 0.5;
+				precomp.reflectivity = TERRAIN_GLOSS;
 				precomp.metal = metal;
 				precomp.traced = 0;
 				precomp.water = 0;

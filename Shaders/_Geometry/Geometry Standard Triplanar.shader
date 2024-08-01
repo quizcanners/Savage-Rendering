@@ -157,11 +157,11 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					return o;
 				}
 
-				sampler2D _MainTex;
-				sampler2D _SpecularMap;
+				UNITY_DECLARE_TEX2D(_MainTex);
+				UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularMap);
 				float4 _MainTex_ST;
 				float4 _MainTex_TexelSize;
-				sampler2D _BumpMap;
+				UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap);
 				float4 _EdgeColor;
 				float4 _EdgeMads;
 				float _HorizontalTiling;
@@ -169,14 +169,12 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 
 
 #				if _DAMAGED
-					Texture2D _Damage_Tex;
-					SamplerState sampler_Damage_Tex; //_Damage_Tex.Sample(sampler_Damage_Tex, offsetUv);
+					UNITY_DECLARE_TEX2D(_Damage_Tex);
 					float4 _Damage_Tex_TexelSize;
-					Texture2D _DamDiffuse;
+					UNITY_DECLARE_TEX2D_NOSAMPLER(_DamDiffuse);
 					float4 _DamDiffuse_TexelSize;
-					Texture2D _DamDiffuse2;
+					UNITY_DECLARE_TEX2D_NOSAMPLER(_DamDiffuse2);
 					float4 _DamDiffuse2_TexelSize;
-					
 #				endif
 
 				sampler2D _BloodPattern;
@@ -190,8 +188,8 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 
 				void CombineMaps(inout float currentHeight, inout float4 madsMap, out float3 tnormal, out float showNew, float dotNormal, float2 uv)
 				{
-					tnormal = UnpackNormal(tex2D(_BumpMap, uv));
-					float4 newMadspMap = tex2D(_SpecularMap, uv);
+					tnormal = UnpackNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, uv));
+					float4 newMadspMap = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularMap, _MainTex, uv);
 					float newHeight = 0.5 + newMadspMap.b*0.5;  
 
 					showNew = GetShowNext(currentHeight, newHeight, dotNormal);
@@ -202,17 +200,23 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 
 				float _Reflectivity;
 				uniform float _BumpScale;
-
 				
+				  //  sampler2D _CameraDepthTexture;
+
 #if _OFFSET_BY_HEIGHT
 				FragColDepth frag(v2f i)
 #else 
 				float4 frag(v2f i) : COLOR
 #endif
 				{
-					float3 viewDir = normalize(i.viewDir.xyz);
+				
 					float2 screenUV = i.screenPos.xy / i.screenPos.w;
 
+					float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screenUV);
+					float sceneZ = LinearEyeDepth(UNITY_SAMPLE_DEPTH(depth));
+					clip(sceneZ-i.screenPos.z);
+
+					float3 viewDir = normalize(i.viewDir.xyz);
 
 					float3 preNormal;
 #if _BEVELED
@@ -221,6 +225,7 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					float edgeColorVisibility;
 					preNormal = GetBeveledNormal_AndSeam(seam, i.edge,viewDir, i.normal.xyz, i.snormal.xyz, i.edgeNorm0, i.edgeNorm1, i.edgeNorm2, edgeColorVisibility);
 					
+					//return float4(i.snormal.xyz,1); // sharp normal
 #else
 					preNormal = i.normal.xyz;
 #endif
@@ -259,11 +264,11 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					smoothedPixelsSampling(uvSmplZY, _MainTex_TexelSize);
 
 					// Horizontal Sampling X
-					float3 tnormalX = UnpackNormal(tex2D(_BumpMap, uvSmplZY));
-					float4 madsMap = tex2D(_SpecularMap, uvSmplZY);
+					float3 tnormalX = UnpackNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, uvSmplZY));
+					float4 madsMap = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularMap, _MainTex, uvSmplZY);
 					float horHeight = madsMap.b;
 					
-					float4 tex = tex2D(_MainTex, uvSmplZY);
+					float4 tex = UNITY_SAMPLE_TEX2D(_MainTex, uvSmplZY);
 
 					float3 horNorm = float3( 0 , tnormalX.y, tnormalX.x);
 
@@ -276,7 +281,7 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					float showZ;
 					CombineMaps(horHeight, madsMap, tnormalZ, showZ, abs(normal.z) , uvSmplXY);
 
-					float4 texZ = tex2Dlod(_MainTex, float4(uvSmplXY, 0, 0));
+					float4 texZ = UNITY_SAMPLE_TEX2D(_MainTex, float4(uvSmplXY, 0, 0));
 
 					//return texZ;
 					damageUV = lerp(damageUV, uvHor.xy%1, abs(preNormal.z));
@@ -293,12 +298,12 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					float2 uvSmplXZ = uvHor.xz * tiling;
 					smoothedPixelsSampling(uvSmplXZ, _MainTex_TexelSize);
 
-					float4 texTop = tex2Dlod(_MainTex, float4(uvSmplXZ, 0, 0));
+					float4 texTop = UNITY_SAMPLE_TEX2D(_MainTex, float4(uvSmplXZ, 0, 0));
 
-					float3 tnormalTop = UnpackNormal(tex2D(_BumpMap, uvSmplXZ ));
+					float3 tnormalTop = UnpackNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, uvSmplXZ ));
 					float3 topNorm = float3(tnormalTop.x, 0, tnormalTop.y);
 
-					float4 madsMapTop = tex2D(_SpecularMap, uvSmplXZ);
+					float4 madsMapTop = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularMap, _MainTex, uvSmplXZ);
 					float topHeight = 0.5 + madsMapTop.b * 0.5;
 
 				
@@ -383,13 +388,11 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 					// X - zy
 					// Y - xz
 					// Z - xy
-					//_Damage_Tex.Sample(sampler_Damage_Tex, offsetUv);
-					float4 mask = _Damage_Tex.Sample(sampler_Damage_Tex, damUV) * (0.5 + noise);// .r;// -mask.g;
 
+					float4 mask = UNITY_SAMPLE_TEX2D(_Damage_Tex, damUV)* (0.5 + noise);
 					float2 damPix = _Damage_Tex_TexelSize.xy;
-
-					float maskY = _Damage_Tex.Sample(sampler_Damage_Tex, damUV + float2(0, damPix.y)).g;
-					float maskX = _Damage_Tex.Sample(sampler_Damage_Tex, damUV + float2(damPix.x, 0)).g;
+					float maskY = UNITY_SAMPLE_TEX2D(_Damage_Tex, damUV + float2(0, damPix.y)).g;
+					float maskX = UNITY_SAMPLE_TEX2D(_Damage_Tex, damUV + float2(damPix.x, 0)).g;
 
 					float damDepth = mask.g * (1 + (madsMap.b + madsMap.g) * 0.5);
 
@@ -417,8 +420,8 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 
 					normal = normalize(lerp(normal, damBump, damAlpha));
 
-					float4 dam = _DamDiffuse.Sample(sampler_Damage_Tex, damProjectionUV *4 + offMask * 0.2);
-					float4 dam2 = _DamDiffuse2.Sample(sampler_Damage_Tex, damProjectionUV);
+					float4 dam = UNITY_SAMPLE_TEX2D_SAMPLER(_DamDiffuse, _Damage_Tex, damProjectionUV *4 + offMask * 0.2);//_DamDiffuse.Sample(sampler_Damage_Tex, damProjectionUV *4 + offMask * 0.2);
+					float4 dam2 =UNITY_SAMPLE_TEX2D_SAMPLER(_DamDiffuse2, _Damage_Tex, damProjectionUV);// _DamDiffuse2.Sample(sampler_Damage_Tex, damProjectionUV);
 
 					float damAlpha2 = smoothstep(0.25, 0.45, damDepth);
 
@@ -515,7 +518,16 @@ float3 worldPosAdjusted = i.worldPos;
 				//	ModifyColorByWetness(tex.rgb, water, madsMap.a);
 					float4 traced = float4(1,0,1,1);
 
-					//return float4(normal,1);
+				//	return rawFresnel;
+
+				#if _BEVELED
+
+				normal = lerp(normal, i.snormal.xyz, fresnel);
+					preNormal = lerp(preNormal, i.snormal.xyz, rawFresnel);
+					fresnel *= 0.5;
+					#endif
+					//fresnel = 0;
+				//	return float4(normal,1);
 
 				//	return ssBlock;
 

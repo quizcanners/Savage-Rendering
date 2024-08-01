@@ -86,9 +86,107 @@ void WorldHit_Dynamic(float3 ro, in float3 rd, inout float3 d, inout float3 norm
 {
 	if (IS_HIT_BOX(DYNAMIC_PRIM_BoundPos, DYNAMIC_PRIM_BoundSize))
 	{
-		for (int i=0; i< DYNAMIC_PRIM_COUNT; i++)
-			TRACE_CAPSULE_ROT(DYNAMIC_PRIM[i], DYNAMIC_PRIM_Rot[i], DYNAMIC_PRIM_Size[i], DYNAMIC_PRIM_Mat[i]);
+		for (int dyI=0; dyI< DYNAMIC_PRIM_COUNT; dyI++)
+			TRACE_CAPSULE_ROT(DYNAMIC_PRIM[dyI], DYNAMIC_PRIM_Rot[dyI], DYNAMIC_PRIM_Size[dyI], DYNAMIC_PRIM_Mat[dyI]);
 	}
+}
+
+// Hit Box
+bool isHit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, float3 m)
+{
+	int elementsToProcess[16]; // unlikely to ever be more
+	elementsToProcess[0] = 0;
+	int freeSpace = 1;
+
+	while (freeSpace >0) 
+	{
+		int index = elementsToProcess[freeSpace-1];
+		freeSpace--;
+
+		if (index <0)
+		{
+			// We got Leaf
+			int boundIndex = -index - 1;
+
+			float4 pos = RayMarchCube_BoundPos[boundIndex];
+			float4 size = RayMarchCube_BoundSize[boundIndex];
+
+			if (!IS_HIT_BOX(pos, size))
+				continue;
+			
+			for (int rmcI = pos.w; rmcI < size.w; rmcI++)
+			{
+				float4 posNmat = RayMarchCube[rmcI];
+				float type = posNmat.w;
+				if (type < GLASS && IS_HIT_BOX_ROT(posNmat, RayMarchCube_Rot[rmcI], RayMarchCube_Size[rmcI]))
+					return true;
+			}
+			continue;
+		}  
+		
+		float4 bin_pos = RayMarchCube_BinaryTree_PosNL[index];
+		float4 bin_size = RayMarchCube_BinaryTree_SizeNR[index];
+
+		if (!IS_HIT_BOX(bin_pos, bin_size)) // This one is also a problem
+			continue;
+
+		elementsToProcess[freeSpace] = bin_pos.w;
+		freeSpace++;
+
+		elementsToProcess[freeSpace] = bin_size.w;
+		freeSpace++;
+	}
+
+	return false;
+}
+
+bool isHit_bin_box_unrot(float3 ro, in float3 rd, inout float3 d, float3 m)
+{
+	int elementsToProcess[16]; // unlikely to ever be more
+	elementsToProcess[0] = 0;
+	int freeSpace = 1;
+
+	while (freeSpace >0) 
+	{
+		int index = elementsToProcess[freeSpace-1];
+		freeSpace--;
+
+		if (index <0)
+		{
+			// We got Leaf
+			int boundIndex = -index - 1;
+
+			float4 pos = RayMarchUnRot_BoundPos[boundIndex];
+			float4 size = RayMarchUnRot_BoundSize[boundIndex];
+
+			if (!IS_HIT_BOX(pos, size))
+				continue;
+			
+			for (int rmcuI = pos.w; rmcuI < size.w; rmcuI++)
+			{
+				float4 posNmat = RayMarchUnRot[rmcuI];
+				float type = posNmat.w;
+				if (type < GLASS && IS_HIT_BOX(posNmat, RayMarchUnRot_Size[rmcuI]))
+					return true;
+						
+			}
+			continue;
+		}  
+		
+		float4 bin_pos = RayMarchUnRot_BinaryTree_PosNL[index];
+		float4 bin_size = RayMarchUnRot_BinaryTree_SizeNR[index];
+
+		if (!IS_HIT_BOX(bin_pos, bin_size)) // This one is also a problem
+			continue;
+
+		elementsToProcess[freeSpace] = bin_pos.w;
+		freeSpace++;
+
+		elementsToProcess[freeSpace] = bin_size.w;
+		freeSpace++;
+	}
+
+	return false;
 }
 
 
@@ -99,81 +197,22 @@ bool Raycast(float3 ro, in float3 rd, in float2 dist) {
 
 	float3 d = float3(dist, 0.);
 
-	/*
-#if !defined(IGNORE_FLOOR)
-	if (isPlane(ro, rd, float3(0, 1, 0), d.xy))
-		return true;
-#endif
-*/
-
 	float3 m = sign(rd) / max(abs(rd), 0.00001);//1e-8);
 
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchCube_BoundPos_All, RayMarchCube_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchCube_BoundSize_All.w; b++)
-		{
-			float4 pos = RayMarchCube_BoundPos[b];
-			float4 size = RayMarchCube_BoundSize[b];
-
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++) 
-				{
-					float4 posNmat = RayMarchCube[i];
-					float type = posNmat.w;
-					if (type < GLASS && IS_HIT_BOX_ROT(posNmat, RayMarchCube_Rot[i], RayMarchCube_Size[i]))
-						return true;//(isBoxRotHit(RayMarchCube[i], RayMarchCube_Rot[i], RayMarchCube_Size[i], RayMarchCube_Mat[i]);
-				}
-			}
-		}
-	}
-
-
-	// Unrotated Cubes
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchUnRot_BoundPos_All, RayMarchUnRot_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchUnRot_BoundSize_All.w; b++)
-		{
-			float4 pos = RayMarchUnRot_BoundPos[b];
-			float4 size = RayMarchUnRot_BoundSize[b];
-
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++) 
-				{
-					float4 posNmat = RayMarchUnRot[i];
-					float type = posNmat.w;
-					if (type < GLASS && IS_HIT_BOX(posNmat, RayMarchUnRot_Size[i]))
-						return true;//(isBoxRotHit(RayMarchCube[i], RayMarchCube_Rot[i], RayMarchCube_Size[i], RayMarchCube_Mat[i]);
-				}
-			}
-		}
-	}
-
-	/*
-	if (IS_HIT_SPHERE(RayMarchSphere_0, RayMarchSphere_0_Size.x))
+	if (isHit_bin_box_rot(ro, rd, d, m))
 		return true;
 
-	if (IS_HIT_SPHERE(RayMarchSphere_1, RayMarchSphere_1_Size.x))
+	if (isHit_bin_box_unrot(ro, rd, d, m))
 		return true;
-*/
-	//d = opU(d, iSphere(ro - RayMarchSphere_0.xyz, rd, d.xy, normal, RayMarchSphere_0_Size.x), RayMarchSphere_0_Mat, mat, RayMarchSphere_0.w);
-	//d = opU(d, iSphere(ro - RayMarchSphere_1.xyz, rd, d.xy, normal, RayMarchSphere_1_Size.x), RayMarchSphere_1_Mat, mat, RayMarchSphere_1.w);
 
-	
 #if defined(RENDER_DYNAMICS)
 
 	UNITY_BRANCH
 	if (IS_HIT_BOX(DYNAMIC_PRIM_BoundPos, DYNAMIC_PRIM_BoundSize))
 	{
-		for (int i = 0; i < DYNAMIC_PRIM_COUNT; i++)
-			if (IS_HIT_CAPSULE_ROT(DYNAMIC_PRIM[i], DYNAMIC_PRIM_Rot[i], DYNAMIC_PRIM_Size[i]))
+		for (int dyI = 0; dyI < DYNAMIC_PRIM_COUNT; dyI++)
+			if (IS_HIT_CAPSULE_ROT(DYNAMIC_PRIM[dyI], DYNAMIC_PRIM_Rot[dyI], DYNAMIC_PRIM_Size[dyI]))
 				return true;
-			//TRACE_CAPSULE_ROT(DYNAMIC_PRIM[i], DYNAMIC_PRIM_Rot[i], DYNAMIC_PRIM_Size[i], DYNAMIC_PRIM_Mat[i]);
 	}
 #endif
 
@@ -197,68 +236,106 @@ bool RaycastStaticPhisics(float3 ro, in float3 rd, in float2 dist) {
 
 	float3 d = float3(dist, 0.);
 
-	/*
-#if !defined(IGNORE_FLOOR)
-	if (isPlane(ro, rd, float3(0, 1, 0), d.xy))
-		return true;
-#endif
-*/
-
 	float3 m = sign(rd) / max(abs(rd), 0.0001);//1e-8);
 
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchCube_BoundPos_All, RayMarchCube_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchCube_BoundSize_All.w; b++)
-		{
-			float4 pos = RayMarchCube_BoundPos[b];
-			float4 size = RayMarchCube_BoundSize[b];
-
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++)
-				{
-					float4 posNmat = RayMarchCube[i];
-					float type = posNmat.w;
-					if (IS_HIT_BOX_ROT(posNmat, RayMarchCube_Rot[i], RayMarchCube_Size[i]))
-						return true;//(isBoxRotHit(RayMarchCube[i], RayMarchCube_Rot[i], RayMarchCube_Size[i], RayMarchCube_Mat[i]);
-				}
-			}
-		}
-	}
-
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchUnRot_BoundPos_All, RayMarchUnRot_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchUnRot_BoundSize_All.w; b++)
-		{
-			float4 pos = RayMarchUnRot_BoundPos[b];
-			float4 size = RayMarchUnRot_BoundSize[b];
-
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++)
-				{
-					float4 posNmat = RayMarchUnRot[i];
-					float type = posNmat.w;
-					if (IS_HIT_BOX(posNmat, RayMarchUnRot_Size[i]))
-						return true;//(isBoxRotHit(RayMarchCube[i], RayMarchCube_Rot[i], RayMarchCube_Size[i], RayMarchCube_Mat[i]);
-				}
-			}
-		}
-	}
-
-	/*
-	if (IS_HIT_SPHERE(RayMarchSphere_0, RayMarchSphere_0_Size.x))
+	if (isHit_bin_box_rot(ro, rd, d, m))
 		return true;
 
-	if (IS_HIT_SPHERE(RayMarchSphere_1, RayMarchSphere_1_Size.x))
+	if (isHit_bin_box_unrot(ro, rd, d, m))
 		return true;
-		*/
+
 	return false;
 }
+
+
+// Render ray
+
+void hit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, inout float3 normal, inout float4 mat, float3 m) 
+{
+	int elementsToProcess[16]; // unlikely to ever be more
+	elementsToProcess[0] = 0;
+	int freeSpace = 1;
+
+	while (freeSpace >0) 
+	{
+		int index = elementsToProcess[freeSpace-1];
+		freeSpace--;
+
+		if (index <0)
+		{
+			// We got Leaf
+			int boundIndex = -index - 1;
+
+			float4 pos = RayMarchCube_BoundPos[boundIndex];
+			float4 size = RayMarchCube_BoundSize[boundIndex];
+
+			if (!IS_HIT_BOX(pos, size))
+				continue;
+			
+			for (int rtbI = pos.w; rtbI < size.w; rtbI++)
+				TRACE_BOX_ROT(RayMarchCube[rtbI], RayMarchCube_Rot[rtbI], RayMarchCube_Size[rtbI], RayMarchCube_Mat[rtbI]);
+				
+			continue;
+		}  
+		
+		float4 bin_pos = RayMarchCube_BinaryTree_PosNL[index];
+		float4 bin_size = RayMarchCube_BinaryTree_SizeNR[index];
+
+		if (!IS_HIT_BOX(bin_pos, bin_size)) // This one is also a problem
+			continue;
+
+		elementsToProcess[freeSpace] = bin_pos.w;
+		freeSpace++;
+
+		elementsToProcess[freeSpace] = bin_size.w;
+		freeSpace++;
+	}
+
+}
+
+void hit_bin_box_unrot(float3 ro, in float3 rd, inout float3 d, inout float3 normal, inout float4 mat, float3 m) 
+{
+	int elementsToProcess[16]; // unlikely to ever be more
+	elementsToProcess[0] = 0;
+	int freeSpace = 1;
+
+	while (freeSpace >0) 
+	{
+		int index = elementsToProcess[freeSpace-1];
+		freeSpace--;
+
+		if (index <0)
+		{
+			// We got Leaf
+			int boundIndex = -index - 1;
+
+			float4 pos = RayMarchUnRot_BoundPos[boundIndex];
+			float4 size = RayMarchUnRot_BoundSize[boundIndex];
+
+			if (!IS_HIT_BOX(pos, size))
+				continue;
+			
+			for (int rtbuI = pos.w; rtbuI < size.w; rtbuI++)
+				TRACE_BOX(RayMarchUnRot[rtbuI], RayMarchUnRot_Size[rtbuI], RayMarchUnRot_Mat[rtbuI]);
+
+			continue;
+		}  
+		
+		float4 bin_pos = RayMarchUnRot_BinaryTree_PosNL[index];
+		float4 bin_size = RayMarchUnRot_BinaryTree_SizeNR[index];
+
+		if (!IS_HIT_BOX(bin_pos, bin_size)) // This one is also a problem
+			continue;
+
+		elementsToProcess[freeSpace] = bin_pos.w;
+		freeSpace++;
+
+		elementsToProcess[freeSpace] = bin_size.w;
+		freeSpace++;
+	}
+}
+
+
 
 float3 worldhit(float3 ro, in float3 rd, in float2 dist, out float3 normal, inout float4 mat) 
 {
@@ -274,45 +351,11 @@ float3 worldhit(float3 ro, in float3 rd, in float2 dist, out float3 normal, inou
 
 	float3 dTmp = d;
 
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchCube_BoundPos_All, RayMarchCube_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchCube_BoundSize_All.w; b++) 
-		{
-			float4 pos = RayMarchCube_BoundPos[b];
-			float4 size = RayMarchCube_BoundSize[b];
+	if (RayMarchCube_BinaryTree_Count.x>0)
+		hit_bin_box_rot(ro, rd, d, normal, mat, m);
 
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++)
-				{						
-					TRACE_BOX_ROT(RayMarchCube[i], RayMarchCube_Rot[i], RayMarchCube_Size[i], RayMarchCube_Mat[i]);
-				}
-			}
-		}
-	}
-
-	// Unrotated
-	UNITY_BRANCH
-	if (IS_HIT_BOX(RayMarchUnRot_BoundPos_All, RayMarchUnRot_BoundSize_All))
-	{
-		for (int b = 0; b <= RayMarchUnRot_BoundSize_All.w; b++) 
-		{
-			float4 pos = RayMarchUnRot_BoundPos[b];
-			float4 size = RayMarchUnRot_BoundSize[b];
-
-			UNITY_BRANCH
-			if (IS_HIT_BOX(pos, size))
-			{
-				for (int i = pos.w; i < size.w; i++)
-				{
-					TRACE_BOX(RayMarchUnRot[i], RayMarchUnRot_Size[i],RayMarchUnRot_Mat[i]);
-				}
-			}
-		}
-	}
-
+	if (RayMarchUnRot_BinaryTree_Count.x>0)
+		hit_bin_box_unrot(ro, rd, d, normal, mat, m);
 
 	#if defined(RENDER_DYNAMICS)
 

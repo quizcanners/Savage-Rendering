@@ -105,6 +105,35 @@ float3 GetPointLight(float3 position, float3 normal, float ao)
 	return col;
 }
 
+float3 GetPointLight(float3 position)
+{
+	if (_qc_PointLight_Color.a==0)
+	{
+		return 0;
+	}
+
+	float3 lightDir = _qc_PointLight_Position.xyz - position;
+
+	float distance = length(lightDir);
+
+	lightDir = normalize(lightDir);
+
+	float2 MIN_MAX = float2(0.0001, distance);
+
+	bool isHit = RaycastStaticPhisics(position, lightDir, MIN_MAX);
+
+	if (isHit) 
+		return 0;
+	
+	float distFade = 1/(1 + pow(distance, 2));
+
+	
+	float3 col = _qc_PointLight_Color.rgb * distFade;
+
+	return col;
+}
+
+
 float3 GetPointLight(float3 position, float3 normal, float ao, float3 viewDir, float gloss, inout float3 lightSpecular)
 {
 	if (_qc_PointLight_Color.a==0)

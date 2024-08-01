@@ -254,6 +254,7 @@ Shader "QcRendering/Geometry/Standard"
 
 
 				float4 _Color;
+				 sampler2D _CameraDepthTexture;
 
 #if _OFFSET_BY_HEIGHT
 
@@ -270,12 +271,19 @@ Shader "QcRendering/Geometry/Standard"
 #endif
 				{
 					// ***************** NON - SIMPLIFY SHADER
+						float2 screenUv = i.screenPos.xy / i.screenPos.w;
+
+						#if _MICRODETAIL_NONE
+					 float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screenUv);
+			    float sceneZ = LinearEyeDepth(UNITY_SAMPLE_DEPTH(depth));
+			    clip(sceneZ-i.screenPos.z);
+				#endif
 
 					float3 viewDir = normalize(i.viewDir.xyz);
 					float rawFresnel = saturate(1- dot(viewDir, i.normal.xyz));
 
 					//#if !_NO_HB_AMBIENT
-						float2 screenUv = i.screenPos.xy / i.screenPos.w;
+					
 					//#endif
 
 					float2 uv = TRANSFORM_TEX(i.texcoord.xy, _MainTex);

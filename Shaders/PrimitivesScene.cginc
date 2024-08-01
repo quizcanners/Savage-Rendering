@@ -6,8 +6,13 @@
 
 // CUBES
 
-#define ARRAY_BOX_COUNT 8
-#define ARRAY_SIZE 64
+// Match this with TracingPrimitives.GeometryObjectArray
+
+#define ARRAY_BOX_COUNT 64
+#define ARRAY_SIZE 256
+#define BINARY_TREE_SIZE 64
+
+
 #define QC_NATIVE_SHADOW_DISTANCE 50
 //1e10
 
@@ -17,13 +22,17 @@
 uniform float4 RayMarchUnRot[ARRAY_SIZE];
 uniform float4 RayMarchUnRot_Size[ARRAY_SIZE];
 uniform float4 RayMarchUnRot_Mat[ARRAY_SIZE];
-//uniform float4 RayMarchUnRot_Rot[ARRAY_SIZE];
 
 uniform float4 RayMarchUnRot_BoundPos[ARRAY_BOX_COUNT];
 uniform float4 RayMarchUnRot_BoundSize[ARRAY_BOX_COUNT];
 
 uniform float4 RayMarchUnRot_BoundPos_All;
 uniform float4 RayMarchUnRot_BoundSize_All;
+
+uniform float4 RayMarchUnRot_BinaryTree_PosNL[BINARY_TREE_SIZE];
+uniform float4 RayMarchUnRot_BinaryTree_SizeNR[BINARY_TREE_SIZE];
+uniform float4 RayMarchUnRot_BinaryTree_Count;
+//BINARY_TREE_SIZE
 
 // Rotated Cubes
 uniform float4 RayMarchCube[ARRAY_SIZE];
@@ -36,6 +45,10 @@ uniform float4 RayMarchCube_BoundSize[ARRAY_BOX_COUNT];
 
 uniform float4 RayMarchCube_BoundPos_All;
 uniform float4 RayMarchCube_BoundSize_All; // W - box count
+
+uniform float4 RayMarchCube_BinaryTree_PosNL[BINARY_TREE_SIZE];
+uniform float4 RayMarchCube_BinaryTree_SizeNR[BINARY_TREE_SIZE];
+uniform float4 RayMarchCube_BinaryTree_Count;
 
 // Dynamics
 

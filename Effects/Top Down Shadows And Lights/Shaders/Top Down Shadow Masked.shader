@@ -87,7 +87,7 @@ Shader "QcRendering/Top Down/Light And Shadow"
 
 				float alpha;
 
-				float wPosY = (i.worldPos.y - _RayTracing_TopDownBuffer_Position.y) / _Range;
+				float wPosY = (i.worldPos.y - _RayTracing_TopDownBuffer_Position.y);
 
 				float sharpness =
 				#if _IGNORE_HEIGHT
@@ -104,6 +104,7 @@ Shader "QcRendering/Top Down/Light And Shadow"
 				#endif
 #elif _SHAPE_SHARP
 				alpha = smoothstep(0.25, 0, dist);
+					
 #else
 				alpha = 1;
 #endif
@@ -113,7 +114,7 @@ Shader "QcRendering/Top Down/Light And Shadow"
 
 				return i.color * alpha
 				#if !_IGNORE_HEIGHT
-					* smoothstep(10,0.25, wPosY) * smoothstep(-1.5, 0, wPosY)
+					* 1/(1 + pow(abs(wPosY),2)) * smoothstep(-1.5, 0, wPosY)
 				#endif
 				;
 			}

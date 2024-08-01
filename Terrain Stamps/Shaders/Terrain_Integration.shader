@@ -4,6 +4,9 @@ Shader "QcRendering/Terrain/Integration"
     {
         _MainTex ("Texture", 2D) = "white" {}
         _SpecularMap("R-Metalic G-Ambient _ A-Specular", 2D) = "black" {}
+
+     //  [KeywordEnum(OFF, PLASTIC, METAL, LAYER, MIXED_METAL, PAINTED_METAL)] _REFLECTIVITY("Reflective Material Type", Float) = 0
+
         _BumpMap("Normal Map", 2D) = "bump" {}
         _BlendHeight("Blend Height", Range(0,100)) = 1
         _BlendSharpness("Blend Sharpness", Range(0,1)) = 0
@@ -20,6 +23,7 @@ Shader "QcRendering/Terrain/Integration"
 
         CGINCLUDE
 
+       
             #include "Qc_TerrainCommon.cginc"
             #include "UnityCG.cginc"
 			#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Standard.cginc"
@@ -41,6 +45,10 @@ Shader "QcRendering/Terrain/Integration"
 			#pragma multi_compile ___ _qc_IGNORE_SKY 
 
              #pragma multi_compile ___ qc_USE_TERRAIN
+
+                  //#pragma shader_feature _REFLECTIVITY_PLASTIC
+            //#pragma shader_feature_local _REFLECTIVITY_PLASTIC  _REFLECTIVITY_OFF
+            #pragma shader_feature_local _REFLECTIVITY_PLASTIC _REFLECTIVITY_OFF
 
             struct v2f
             {
@@ -80,20 +88,29 @@ Shader "QcRendering/Terrain/Integration"
             float _BlendSharpness;
             float _FoceContactBlend;
 
+           // sampler2D _CameraDepthTexture;
+
             fixed4 frag (v2f i) : SV_Target
             {
-                float3 viewDir = normalize(i.viewDir);
+               
                 float2 screenUv = i.screenPos.xy / i.screenPos.w;
+
+                /*
+                float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, screenUv);
+			    float sceneZ = LinearEyeDepth(UNITY_SAMPLE_DEPTH(depth));
+			    clip(sceneZ-i.screenPos.z);*/
+
+                 float3 viewDir = normalize(i.viewDir);
 
                  fixed4 tex = tex2D(_MainTex, i.texcoord);
                  float3 bump = UnpackNormal(_BumpMap.Sample(sampler_BumpMap, i.texcoord));
                  float4 madsMapObj = _SpecularMap.Sample(sampler_BumpMap, i.texcoord);
 
-                    float3 normal = i.normal.xyz;
+                 float3 normal = i.normal.xyz;
                  ApplyTangent (normal, bump, i.wTangent);
 
-                      float ao = 1;
-                      float3 rawNormal =i.normal.xyz;
+                float ao = 1;
+                float3 rawNormal =i.normal.xyz;
 
                  float4 madsMap;
 
@@ -139,11 +156,8 @@ Shader "QcRendering/Terrain/Integration"
 
 			    ao *= SampleSS_Illumination( screenUv, illumination);
 			    shadow *= saturate(1-illumination.b);
-                 ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
+                ao *= madsMap.g + (1-madsMap.g) * rawFresnel;
  
-              //  return ao;
-
-
                 float metal = 0; 
 				float fresnel =  GetFresnel_FixNormal(normal, rawNormal, viewDir);
 
@@ -154,7 +168,7 @@ Shader "QcRendering/Terrain/Integration"
 				precomp.fresnel = fresnel;
 				precomp.tex = tex;
 				
-				precomp.reflectivity = 1;
+				precomp.reflectivity = TERRAIN_GLOSS;
 				precomp.metal = metal;
 				precomp.traced = 0;
 				precomp.water = 0;

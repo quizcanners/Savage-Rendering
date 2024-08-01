@@ -55,6 +55,14 @@ namespace QuizCanners.VolumeBakedRendering
 
             public bool LerpDone { get; private set; }
 
+            private string _weatherDirtyReason;
+
+            private void SetWeatherDirty(string reason) 
+            {
+                _weatherDirtyReason = reason;
+                LerpDone = false;
+            }
+
             protected Singleton_SunAndMoonRotator SunAndMoon => Singleton.Get<Singleton_SunAndMoonRotator>();
 
             public Color SunColor 
@@ -78,7 +86,7 @@ namespace QuizCanners.VolumeBakedRendering
                 set 
                 {
                     AMBIENT_COLOR.TargetValue = value;
-                    LerpDone = false;
+                    SetWeatherDirty(reason: "Ambient color change");
                 }
             }
 
@@ -172,7 +180,7 @@ namespace QuizCanners.VolumeBakedRendering
             public void DecodeInternal(CfgData data)
             {
                 new CfgDecoder(data).DecodeTagsFor(this);
-                LerpDone = false;
+                SetWeatherDirty(reason: "Decoded new config" );
                 Mgmt.RequestLerps("Light Decoder");
                 LightConfigVersion++;
             }
@@ -272,7 +280,7 @@ namespace QuizCanners.VolumeBakedRendering
 
                 if (LerpDone) 
                 {
-                    Mgmt.SetBakingDirty(reason: "WEather Manager Lerp Finished", invalidateResult: true);
+                    Mgmt.SetBakingDirty(reason: "Weather Manager Lerp Finished after "+ _weatherDirtyReason, invalidateResult: true);
                 }
 
                 RenderSettings.fogColor = FOG_COLOR.CurrentValue;
@@ -434,7 +442,7 @@ namespace QuizCanners.VolumeBakedRendering
                     }
                     if (changed)
                     {
-                        LerpDone = false;
+                        SetWeatherDirty(reason: "Inspector UI changes");
                         UpdateEffectiveSunColor();
                     }
                 }
