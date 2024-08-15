@@ -18,6 +18,7 @@ Shader "Unlit/Append To Front"
             #pragma multi_compile_fog
 
             #include "Assets/Qc_Rendering/Shaders/Savage_Baker_VolumetricFog.cginc"
+            #include "Assets/Qc_Rendering/Shaders/Savage_Tonemapping.cginc"
 
             struct appdata
             {
@@ -61,9 +62,9 @@ Shader "Unlit/Append To Front"
                 float3 light = 0;
                 float obscurance = 0;
                  
-                 int DISTANCE_IMPORTANCE = 6;
+                 int DISTANCE_IMPORTANCE = 4;
 
-                 float MIN_LAYER_ALPHA = 2048;
+                 float MIN_LAYER_ALPHA = 512;
 
                 int MAX_DIST_POWER = pow(15,DISTANCE_IMPORTANCE) + MIN_LAYER_ALPHA;//16; //(1 + i)
 
@@ -94,6 +95,8 @@ Shader "Unlit/Append To Front"
 
                     //col+= checking;
                 }
+
+                light = TonemapColor(light);
 
                 return float4(light, obscurance);
             }

@@ -22,6 +22,7 @@ namespace QuizCanners.StampTerrain
 
             if (lod) 
             {
+                _rendys = new List<Renderer>();
                 foreach (var l in lod.GetLODs()) 
                 {
                     foreach (var r in l.renderers)

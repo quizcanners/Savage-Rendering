@@ -25,11 +25,11 @@ namespace QuizCanners.VolumeBakedRendering
 
         const string CUBE_ARRAY_NAME = "RayMarchCube";
 
-        [NonSerialized] private DebugShapes _debugShapes = DebugShapes.Off;
+        [NonSerialized] private DebugShapes _debugShapes = DebugShapes.Rotated;
 
         private ShapesUpdateState _updateState = ShapesUpdateState.Standby;
 
-        private enum DebugShapes { Off, HideRotated, HideUnrotated }
+        private enum DebugShapes { All, Rotated, Unrotated, Dynamic }
 
         private enum ShapesUpdateState { Standby, Gouping, Ready }
 
@@ -52,27 +52,27 @@ namespace QuizCanners.VolumeBakedRendering
                     //var environment = GetEnvironment();
                     var vol = C_VolumeTexture.LatestInstance;
 
-                    bool arrangementDirty = _pushingToShaderArrangementVersion.TryChange(SceneElementsVersion);
-                    bool volumeDirty = vol && _volumeVersion.TryChange(vol.LocationVersion);
+                    bool arrangementDirty = _pushingToShaderArrangementVersion.IsDirty(SceneElementsVersion);
+                    bool volumeDirty = vol && _volumeVersion.IsDirty(vol.LocationVersion);
+
+
 
                     if (!arrangementDirty && !volumeDirty)
                         break;
+
+                    _pushingToShaderArrangementVersion.TryChange(SceneElementsVersion);
+                    if (vol)
+                        _volumeVersion.TryChange(vol.LocationVersion);
 
                     // Don't rebake stuff when more of the level is loaded.
                     if (arrangementDirty && !Application.isPlaying)
                         _restartBakeRequest.CreateRequest();
 
-                        _updateState = ShapesUpdateState.Gouping;
+                    _updateState = ShapesUpdateState.Gouping;
 
-                    if (_debugShapes == DebugShapes.HideRotated)
-                        rotatedCubes.SortedElements = new SortedElement[0];
-                    else
-                        UpdateShapeLists(ref rotatedCubes.SortedElements, rotatedCubes.ShapeToReflect, rotated: true);
+                    UpdateShapeLists(ref rotatedCubes.SortedElements, rotatedCubes.ShapeToReflect, rotated: true);
 
-                    if (_debugShapes == DebugShapes.HideUnrotated)
-                        unRotatedCubes.SortedElements = new SortedElement[0];
-                    else
-                        UpdateShapeLists(ref unRotatedCubes.SortedElements, unRotatedCubes.ShapeToReflect, rotated: false);
+                    UpdateShapeLists(ref unRotatedCubes.SortedElements, unRotatedCubes.ShapeToReflect, rotated: false);
 
                     rotatedCubes.StartGroupingBoxesJob();
                     unRotatedCubes.StartGroupingBoxesJob();
@@ -104,7 +104,7 @@ namespace QuizCanners.VolumeBakedRendering
 
                 case ShapesUpdateState.Gouping:
 
-                    if (!rotatedCubes.IsGroupingDone || !unRotatedCubes.IsGroupingDone)
+                    if (!rotatedCubes.IsJobCompletedDone || !unRotatedCubes.IsJobCompletedDone)
                         break;
 
                     rotatedCubes.ProcessBoxesAfterJob();
@@ -162,7 +162,7 @@ namespace QuizCanners.VolumeBakedRendering
                     if ("Floor Color".PegiLabel().Edit(ref _floorColor).Nl())
                         FLOOR_COLOR.GlobalValue = _floorColor;*/
 
-                    "Debug Shapes".PegiLabel().Edit_Enum(ref _debugShapes).Nl(()=> _pushingToShaderArrangementVersion.ValueIsDefined = false);
+                    "Debug Shapes".PegiLabel().Edit_Enum(ref _debugShapes).Nl();
                 }
 
                 pegi.Nl();
@@ -188,9 +188,19 @@ namespace QuizCanners.VolumeBakedRendering
                 a.Value.OnSceneDraw_Nested();
             }*/
 
-            rotatedCubes.OnSceneDraw_Nested();
-            unRotatedCubes.OnSceneDraw_Nested();
-            dynamicObjects.OnSceneDraw_Nested();
+            switch (_debugShapes) 
+            {
+                case DebugShapes.All:
+                    rotatedCubes.OnSceneDraw_Nested();
+                    unRotatedCubes.OnSceneDraw_Nested();
+                    dynamicObjects.OnSceneDraw_Nested();
+                    break;
+                case DebugShapes.Dynamic: dynamicObjects.OnSceneDraw_Nested(); break;
+                case DebugShapes.Unrotated: unRotatedCubes.OnSceneDraw_Nested(); break;
+                case DebugShapes.Rotated: rotatedCubes.OnSceneDraw_Nested();  break;
+            }
+
+           
         }
 
         public void OnDrawGizmos() => this.OnSceneDraw_Nested();

@@ -14,6 +14,9 @@ float4 Qc_Zibra_ContainerPosition;
 float4 Qc_Zibra_ContainerScale;
 float4 Qc_Zibra_GridSize;
 
+uniform float4 qc_WindDirection;
+uniform float4 qc_WindParameters;
+
 static const float myDitherPattern[8][8] =
 {
 	{
@@ -123,9 +126,12 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 	float4 sampled = 0;
 
 	#if !_qc_IGNORE_SKY
-		float atten =  GetSunShadowsAttenuation(pos, dist);//DirLightRealtimeShadow(0, pos);
-
-		sampled.rgb += atten * (0.5 + facingSun) * GetDirectional();// * (4 - qc_LayeredFog_Alpha*3) * 0.25;
+		float atten = 1;
+		if (_qc_SunVisibility>0.1)
+		{
+			atten =  GetSunShadowsAttenuation(pos, dist);//DirLightRealtimeShadow(0, pos);
+			sampled.rgb += atten * (0.5 + facingSun) * GetDirectional();// * (4 - qc_LayeredFog_Alpha*3) * 0.25;
+		}
 	#endif
 
 		float outOfBounds;
@@ -169,17 +175,25 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 
 		#endif
 
-		if (_qc_WindDirection.a > 0.01)
-		{
-			float3 posToSample = pos *0.1 + _qc_WindDirection.xyz * _Time.x;
+		float intensity = qc_WindParameters.y;
 
-			float4 noise = Noise3D(posToSample * pow(0.1 , nearLevel) );
-			float4 noiseNext = Noise3D(posToSample * pow(0.1 , nextLevel));
+		
+
+		if (intensity > 0.01)
+		{
+			float frq = qc_WindParameters.x;
+
+			float windSpeed = qc_WindParameters.z;
+
+			float3 posToSample = pos + qc_WindDirection.xyz * windSpeed * _Time.y;
+
+			float4 noise = Noise3D(posToSample * pow(frq , nearLevel) );
+			float4 noiseNext = Noise3D(posToSample * pow(frq , nextLevel));
 
 			float transition = level - nearLevel;
 			noise = lerp(noise,noiseNext, transition);
 
-			 visibilityMode *= lerp(visibilityMode, 1-noise.r, _qc_WindDirection.a * smoothstep(5, 10, dist));
+			 visibilityMode *= lerp(visibilityMode, 1.25-noise.r, intensity * smoothstep(5, 10, dist));
 		}
 
 

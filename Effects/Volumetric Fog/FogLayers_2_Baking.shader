@@ -91,6 +91,8 @@ Shader "Unlit/Fog Layers Baking"
 
 				float3 finish = ReconstructWorldSpacePositionFromDepth(i.uv, depth); // Is Correct
 
+              //  return depth * 1000;
+
                 float3 toPosVec = finish - from;
 
 				float len = min(length(toPosVec), qc_LayeredFog_Distance);

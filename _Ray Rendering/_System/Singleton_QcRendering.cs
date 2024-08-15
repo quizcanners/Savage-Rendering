@@ -17,9 +17,8 @@ namespace QuizCanners.VolumeBakedRendering
     {
         [Header("Submanagers")]
         [SerializeField] internal BuffersManager buffersManager = new();
-        [SerializeField] internal TracerManager tracerManager = new();
-        [SerializeField] internal TracingPrimitivesManager sceneManager = new();
-        [SerializeField] internal QualityManager qualityManager = new();
+        [SerializeField] internal RenderingOutputManager tracerManager = new();
+        [SerializeField] internal TemporalAccumulationManager sceneManager = new();
         [SerializeField] internal ColorManager colorManager = new();
         [SerializeField] internal SDFVolume sdfVolume = new();
         [SerializeField] internal DirectLightsVolume directLights = new();
@@ -38,14 +37,13 @@ namespace QuizCanners.VolumeBakedRendering
         }
 
         Singleton_VolumeTracingBaker VolumeTracingBaker => Singleton.Get<Singleton_VolumeTracingBaker>();
-        internal RayRenderingTarget Target => tracerManager.Target;
+        internal RenderingMode Target => tracerManager.Target;
         public bool NeedScreenSpaceBaking => lightsManager.MaxRenderFrames > sceneManager.StableFrames;
-        internal bool TargetIsScreenBuffer => Target == RayRenderingTarget.RayIntersection || Target == RayRenderingTarget.RayMarching || Target == RayRenderingTarget.ProgressiveRayMarching;
+        internal bool TargetIsScreenBuffer => Target == RenderingMode.RayTracing || Target == RenderingMode.RayMarching || Target == RenderingMode.ProgressiveRayMarching;
        
         protected override void OnAfterEnable()
         {
            // this.Decode(_lastState);
-            qualityManager.ManagedOnEnable();
             tracerManager.OnConfigurationChanged();
             sceneManager.ManagedOnEnable();
             lightsManager.ManagedOnEnable();
@@ -156,7 +154,7 @@ namespace QuizCanners.VolumeBakedRendering
             {
                 RenderTexture targetBuffer;
 
-                if (Target == RayRenderingTarget.ProgressiveRayMarching && stableFrames == 0)
+                if (Target == RenderingMode.ProgressiveRayMarching && stableFrames == 0)
                 {
                     targetBuffer = buffersManager.UseMarchingIntermadiateTexture();
                 }
@@ -252,16 +250,13 @@ namespace QuizCanners.VolumeBakedRendering
 
                 pegi.Nl();
 
-                tracerManager.Enter_Inspect_AsList(exitLabel: "Tracer Manager").Nl();
+                tracerManager.Enter_Inspect_AsList(exitLabel: "Rendering Manager").Nl();
                 lightsManager.Enter_Inspect_AsList(exitLabel: "Weather Manager").Nl();
                 sceneManager.Enter_Inspect_AsList(exitLabel: "Scene Manager").Nl();
-                qualityManager.Enter_Inspect_AsList(exitLabel: "Quality Manager").Nl();
                 buffersManager.Enter_Inspect_AsList(exitLabel: "Buffers Manager").Nl();
                 sdfVolume.Enter_Inspect_AsList(exitLabel: "SDF Manager").Nl();
                 directLights.Enter_Inspect_AsList().Nl();
-               // lowResolutionDepth.Enter_Inspect_AsList(exitLabel: "Low Res Depth").Nl();
                 TraceIntoMeshTexture.Enter_Inspect().Nl();
-                //colorManager.Enter_Inspect().Nl();
 
                 if ("Volume".PegiLabel().IsEntered().Nl_ifEntered())
                     VolumeTracingBaker.Nested_Inspect().Nl();
@@ -279,6 +274,7 @@ namespace QuizCanners.VolumeBakedRendering
                     if (context.IsAnyEntered == false)
                     {
                         "Shadows:".PegiLabel(pegi.Styles.BaldText).Nl();
+
                         var sc = QualitySettings.shadowCascades;
                         "_ Cascades".PegiLabel().Edit(ref sc, 1, 4).Nl().OnChanged(() => QualitySettings.shadowCascades = sc);
 
@@ -311,13 +307,10 @@ namespace QuizCanners.VolumeBakedRendering
                         "Lerp Done: {0} [{1}] | Dirty from: {2}".F(_lerpData.dominantParameter, _lerpData.MinPortion, _setDirtyReason).PegiLabel().Nl();
                     }
                 }
-
-                
-      
             }
         }
 
-        public override string ToString() => "RTX Manager";
+        public override string ToString() => "Rendering Manager";
 
         public override void InspectInList(ref int edited, int ind)
         {

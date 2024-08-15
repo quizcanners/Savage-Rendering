@@ -57,7 +57,7 @@ Shader "Unlit/Fog Layers Display"
             inline float GetDownscaledSceneDepth(float2 uv)
             {
                 uv *= qc_DepthMax_TexelSize.zw;
-                uv = floor(uv) + 0.5;
+                uv = floor(uv+0.5);
                 uv *= qc_DepthMax_TexelSize.xy;
                 //return tex2Dlod(_CameraDepthTexture,float4(uv, 0,0));
 	            return tex2Dlod(qc_DepthMax, float4(uv, 0,0));
@@ -65,7 +65,7 @@ Shader "Unlit/Fog Layers Display"
 
            void SampleWeighted(float2 uvSegment, float2 internal, float2 off, float depth, inout float4 total, inout float totalValidity)
            {
-                float2 uv = internal + off * qc_DepthMax_TexelSize.xy * 1.7;
+                float2 uv = internal + off * qc_DepthMax_TexelSize.xy;// * 1.7;
 
                  float4 pix = tex2Dlod(qc_FogLayers, float4(uvSegment + uv/4, 0, 0));
 

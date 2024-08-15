@@ -94,7 +94,6 @@ namespace QuizCanners.SpecialEffects
             }
         }
 
-#if UNITY_EDITOR
         private readonly Gate.Integer _bakerVersion = new();
 
         void IPEGI.Inspect()
@@ -118,7 +117,6 @@ namespace QuizCanners.SpecialEffects
                 "Material (Optional)".PegiLabel().Edit(ref _decalMaterialReplacement).Nl();
             }
         }
-#endif
 
         void Reset() 
         {

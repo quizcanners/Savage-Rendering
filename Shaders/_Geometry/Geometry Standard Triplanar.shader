@@ -97,6 +97,8 @@ Shader "QcRendering/Geometry/Standard Triplanar"
 				
 				#include "Assets/Qc_Rendering/Shaders/Savage_DepthSampling.cginc"
 				
+			
+
 				struct v2f
 				{
 					float4 pos			: SV_POSITION;
@@ -546,6 +548,9 @@ float3 worldPosAdjusted = i.worldPos;
 					precomp.metalColor = lerp(tex, _MetalColor, _MetalColor.a);
 
 					float3 col = GetReflection_ByMaterialType(precomp, normal,  preNormal, viewDir, worldPosAdjusted);
+
+
+					 //col.rgb = TonemapColor(col.rgb);
 
 					ApplyBottomFog(col, i.worldPos.xyz, viewDir.y);
 

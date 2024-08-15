@@ -10,7 +10,7 @@ namespace QuizCanners.VolumeBakedRendering
 {
 
     [CreateAssetMenu(fileName = FILE_NAME, menuName = QcUnity.SO_CREATE_MENU + "Ray Renderer/" + FILE_NAME)]
-    public class SO_HDRsLoading : ScriptableObject, IPEGI
+    public class SO_HDRsLoading : ScriptableObject, IPEGI, IPEGI_ListInspect
     {
         public const string FILE_NAME = "HDR Boxes";
 
@@ -25,6 +25,7 @@ namespace QuizCanners.VolumeBakedRendering
             set
             {
                 QC_SKY_BOX.GlobalValue = value;
+                RenderSettings.customReflectionTexture = value;
             }
         }
 
@@ -114,6 +115,14 @@ namespace QuizCanners.VolumeBakedRendering
         {
             foreach (var h in _hdrs)
                 h.Unload();
+        }
+
+        public void InspectInList(ref int edited, int index)
+        {
+            InspectSelect();
+
+            if (Icon.Enter.Click())
+                edited = index;
         }
 
         [Serializable]

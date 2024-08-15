@@ -1,6 +1,7 @@
 #include "AutoLight.cginc"
 #include "Savage_Sampler_Tracing.cginc"
 #include "Savage_Sampler_Standard_NoTracingPart.cginc"
+#include "Savage_Tonemapping.cginc"
 
 struct MaterialParameters
 {
@@ -18,12 +19,15 @@ struct MaterialParameters
 };
 
 
-inline void ReflectionByAo(inout float3 reflection, float ao, float fresnel)
+void ReflectionByAo(inout float3 reflection, float ao, float fresnel)
 {
 	reflection *= lerp(ao, ao*ao*ao, fresnel);// * ao; // lerp(ao, 1, fresnel);//pow(ao, 1 + fresnel*3);
 }
 
-float3 GetReflection_ByMaterialType(MaterialParameters input, float3 normal, float3 rawNormal, float3 viewDir,  float3 worldPos) 
+//TODO: Rename to ApplyStandardLight
+
+
+float3 ApplyStandardLight_Raw(MaterialParameters input, float3 normal, float3 rawNormal, float3 viewDir,  float3 worldPos) 
 {
 	float3 lightColor = Savage_GetDirectional_Opaque(input.shadow, input.ao, normal, worldPos);
 
@@ -272,6 +276,13 @@ return input.tex.rgb * diffuseColor;
 #endif
 
 return 0;
+}
+
+float3 GetReflection_ByMaterialType(MaterialParameters input, float3 normal, float3 rawNormal, float3 viewDir,  float3 worldPos) 
+{
+	float3 result = ApplyStandardLight_Raw(input, normal, rawNormal, viewDir,  worldPos);
+
+	return TonemapColor(result);
 }
 
 float ApplyWater(inout float water, float rain, inout float ao, float displacement, inout float4 madsMap, inout float3 tnormal, float3 worldPos, float up)

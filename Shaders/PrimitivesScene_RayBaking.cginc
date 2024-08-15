@@ -13,7 +13,7 @@
 #elif _qc_IGNORE_SKY
 	#define PATH_LENGTH 2
 #else
-	#define PATH_LENGTH 3
+	#define PATH_LENGTH 4
 #endif
 
 float3 modifyDirectionWithRoughnessFast(in float3 normal, in float3 refl, in float roughness, in float4 seed) {
@@ -41,9 +41,15 @@ float3 modifyDirectionWithRoughnessFast(in float3 normal, in float3 refl, in flo
 
 void ResampleBakedLight(inout float3 col, inout float3 gatherLight, float3 pos, float3 normal, float roughness)
 {
-	float RESAMPLE_COEFFICIENT = 0.33;
+	float RESAMPLE_COEFFICIENT = 
+	#if _qc_IGNORE_SKY
+	1
+	#else
+	0.33
+	#endif
+	;
 
-	#if !qc_NO_VOLUME && RT_TO_CUBEMAP
+	#if !qc_NO_VOLUME  && RT_TO_CUBEMAP //&& _qc_IGNORE_SKY
 		float outOfBounds;
 		float4 postEffect = SampleDirectPostEffects(pos, outOfBounds);
 		float ao = postEffect.a; 
@@ -52,20 +58,26 @@ void ResampleBakedLight(inout float3 col, inout float3 gatherLight, float3 pos, 
 		float gatheredDiffuse = 0;
 
 		gatheredDiffuse += postEffect.rgb * ao * (1-outOfBounds);
-		//gatheredDiffuse += RESAMPLE_COEFFICIENT * SampleVolume_CubeMap_Internal(pos, normal);
-		gatherLight += col.rgb * gatheredDiffuse * roughness;
+		gatheredDiffuse += RESAMPLE_COEFFICIENT * SampleVolume_CubeMap_Internal(pos, normal);
+		gatherLight += col.rgb * gatheredDiffuse;// * roughness;
 
 	#endif
 }
 
 void ResampleBakedLight_Specular(inout float3 col, inout float3 gatherLight, float3 pos, float3 normal, float3 rd, float roughness)
 {
-	float RESAMPLE_COEFFICIENT_SPECULAR = 0.33;
+	float RESAMPLE_COEFFICIENT_SPECULAR = 
+	#if _qc_IGNORE_SKY
+	1
+	#else
+	0.33
+	#endif
+	;
 
-	#if !qc_NO_VOLUME && RT_TO_CUBEMAP
-		float angle = abs(dot(rd, normal));// perpendicular would mean no specular
+	#if !qc_NO_VOLUME && _qc_IGNORE_SKY && RT_TO_CUBEMAP
+		//float angle = abs(dot(rd, normal));// perpendicular would mean no specular
 
-		gatherLight += col.rgb * SampleVolume_CubeMap_Internal(pos, reflect(rd, normal)) * (1-angle) * RESAMPLE_COEFFICIENT_SPECULAR * (1-roughness);
+		gatherLight += col.rgb * RESAMPLE_COEFFICIENT_SPECULAR * SampleVolume_CubeMap_Internal(pos, reflect(rd, normal));// * (1-angle);// * RESAMPLE_COEFFICIENT_SPECULAR;// * (1-roughness);
 	#endif
 }
 
@@ -108,7 +120,7 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 
 	float BOUNCED_DIRECT_LIGHT_MULTIPLIER = 1;
 	float CELL_SIZE = _RayMarchingVolumeVOLUME_POSITION_N_SIZE.w;
-	float FADE_RAY_AT = CELL_SIZE*3;
+	float FADE_RAY_AT = CELL_SIZE * 0.5;
 	float rayHitDist = FADE_RAY_AT;
 	
 	float3 directional = GetDirectional();
@@ -138,13 +150,13 @@ float4 render(in float3 ro, in float3 rd, in float4 seed)
 			, distance);
 		}
 
-		float rndPointWeight = 1/(1+rayHitDist * seed.x * 0.75 / CELL_SIZE);
+		//float rndPointWeight = 1/(1+rayHitDist * seed.x * 0.75 / CELL_SIZE);
 
-		float3 randomLinePoint = ro + rd * rayHitDist * seed.x * 0.75;
+	//	float3 randomLinePoint = ro + rd * rayHitDist * seed.x * 0.75;
 
 		ro += rd * rayHitDist;
 
-		col *= smoothstep(0, FADE_RAY_AT, rayHitDist);
+	//	col *= smoothstep(0, FADE_RAY_AT, rayHitDist);
 
 
 
@@ -192,6 +204,7 @@ if (type < DIELECTRIC + 0.5)
 				ResampleBakedLight_Specular(col, gatherLight, ro, normal, rd, roughness);
 				col *= albedo;
 				ResampleBakedLight(col, gatherLight, ro, normal, roughness); 
+			
 
 				rd = cosWeightedRandomHemisphereDirection(normal, seed);
 
@@ -220,14 +233,14 @@ if (type < DIELECTRIC + 0.5)
 					gatherLight.rgb += col.rgb * bouncedLight * shadow * directional ;
 				}
 				#endif
-
+				
+				//#if _qc_IGNORE_SKY
 				// Is Metal
 				col *= albedo;
 
-				
 				ResampleBakedLight_Specular(col, gatherLight, ro, normal, rd, roughness);
 				ResampleBakedLight(col, gatherLight, ro, normal, roughness); 
-
+				
 				rd = modifyDirectionWithRoughness(normal, reflect(rd, normal), roughness, seed);
 
 				

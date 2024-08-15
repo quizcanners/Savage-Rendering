@@ -39,14 +39,20 @@ namespace QuizCanners.VolumeBakedRendering
             return diff.x < size.x && diff.y < size.y && diff.z < size.z;
         }
 
+        public Vector3 GetSize() 
+        {
+            var w = Width;
+            return Size * new Vector3(w, Height, w);
+        }
+
         public bool IsInsideBounds(Vector3 point)
         {
             var diff = (GetVolumePosition() - point).Abs();
 
-            var w = Width;
-            var size = 0.5f * Size * new Vector3(w, Height, w);
+            var extends = 0.5f * GetSize();
 
-            return diff.x < size.x && diff.y < size.y && diff.z < size.z;
+
+            return diff.x < extends.x && diff.y < extends.y && diff.z < extends.z;
         }
 
         Vector3 GetVolumePosition()
@@ -57,7 +63,7 @@ namespace QuizCanners.VolumeBakedRendering
           //  return VolumeTexture.GetDiscretePosition(transform.position, Size, out _, 32);
         }
 
-        Vector3 DesiredCenter
+        public Vector3 DesiredCenter
         {
             get
             {

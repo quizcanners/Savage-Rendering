@@ -18,7 +18,7 @@ Shader "QcRendering/Geometry/Standard"
 		[Toggle(_AMBIENT_IN_UV2)] ambInuv2("Ambient mapped to UV2", Float) = 0
 		[Toggle(_COLOR_R_AMBIENT)] colAIsAmbient("Vert Col is Ambient", Float) = 0
 		[Toggle(_FRESNEL_FADE_AO)] fresFadeAo("Fresnel fades AO", Float) = 0
-		[Toggle(_SDF_AMBIENT)] sdfAmbient("SDF Ambient", Float) = 0
+		//[Toggle(_SDF_AMBIENT)] sdfAmbient("SDF Ambient", Float) = 0
 		[Toggle(_NO_HB_AMBIENT)] noHbAmbient("Disable Screen Space Effects", Float) = 0
 
 		[Toggle(_EMISSIVE)] emissiveTexture("Emissive Texture", Float) = 0
@@ -33,7 +33,7 @@ Shader "QcRendering/Geometry/Standard"
 		_SpecularMap2("R-Metalic G-Ambient _ A-Specular", 2D) = "black" {}
 		_BumpMap2("Normal Map 2", 2D) = "bump" {}
 
-		[Toggle(_SIMPLIFY_SHADER)] simplifyShader("Simplify Shader", Float) = 0
+		//[Toggle(_SIMPLIFY_SHADER)] simplifyShader("Simplify Shader", Float) = 0
 
 	
 		//[Toggle(_BICUBIC_SAMPLING)] bicubic("Bicubic Sampling", Float) = 0
@@ -121,9 +121,9 @@ Shader "QcRendering/Geometry/Standard"
 				#pragma shader_feature_local ___ _FRESNEL_FADE_AO
 				#pragma shader_feature_local ___ _DYNAMIC_OBJECT
 				#pragma shader_feature_local ___ _SHOWUVTWO
-				#pragma shader_feature_local ___ _SIMPLIFY_SHADER
+				//#pragma shader_feature_local ___ _SIMPLIFY_SHADER
 				#pragma shader_feature_local ___ _EMISSIVE
-				#pragma shader_feature_local ___ _SDF_AMBIENT
+				//#pragma shader_feature_local ___ _SDF_AMBIENT
 				#pragma shader_feature_local ___ _NO_HB_AMBIENT
 	
 				#include "UnityCG.cginc"
@@ -132,7 +132,7 @@ Shader "QcRendering/Geometry/Standard"
 				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_VolumetricFog.cginc"
 		
 				#include "Assets/Qc_Rendering/Shaders/Savage_Shadowmap.cginc"
-
+			
 				struct v2f 
 				{
 					float4 pos			: SV_POSITION;
@@ -503,7 +503,7 @@ float showRed =0;
 
 				
 
-#if !_SIMPLIFY_SHADER && !_SECOND_LAYER && _MICRODETAIL_NONE
+#if !_SECOND_LAYER && _MICRODETAIL_NONE
 
 					float3 damTnormal = UnpackNormal(tex2D(_BumpD, damUV *4));
 					float3 damTnormal2 = UnpackNormal(tex2D(_BumpD2, damUV));
@@ -563,10 +563,11 @@ float showRed =0;
 
 					float3 worldPosAdjusted = i.worldPos;
 
+					/*
 					#if _SDF_AMBIENT
 					ao *= SampleContactAO_OffsetWorld(worldPosAdjusted, normal);
 					#endif
-
+					*/
 					// **************** light
 
 					float metal = madsMap.r;
@@ -611,10 +612,15 @@ float showRed =0;
 					//brightness = 1-exp(-1*brightness);
 					//col.rgb += (col.gbr + col.brg)*0.2*brightness; //normalize(col.rgb) * brightness * 2;
 
-				//	ApplyBottomFog(col, i.worldPos.xyz, viewDir.y);
+					
 				//	float outOfBounds;
 				//   return SampleDirectPostEffects(i.worldPos, outOfBounds);
 				
+				// col.rgb = TonemapColor(col.rgb); // (col.rgb*(2.51*col.rgb+0.03))/(col.rgb*(2.43f*col.rgb+0.59)+0.14);
+
+
+				ApplyBottomFog(col, i.worldPos.xyz, viewDir.y);
+
 					#if _NO_HB_AMBIENT
 						float4 layeredFog = SampleLayeredFog(length(worldPosAdjusted-_WorldSpaceCameraPos.xyz)*0.2, screenUv);
 						col.rgb = lerp(col.rgb, layeredFog.rgb, layeredFog.a);

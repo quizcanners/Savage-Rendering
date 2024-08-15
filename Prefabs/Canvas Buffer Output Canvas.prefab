@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 8728117414957832611}
   - component: {fileID: 8728117414957832608}
   - component: {fileID: 4462023790093918037}
-  m_Layer: 27
+  m_Layer: 5
   m_Name: Canvas Buffer Output Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -32,7 +32,6 @@ RectTransform:
   m_Children:
   - {fileID: 8728117416482958927}
   m_Father: {fileID: 0}
-  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
@@ -86,7 +85,7 @@ GameObject:
   - component: {fileID: 8728117416482958927}
   - component: {fileID: 8728117416482958928}
   - component: {fileID: 8728117416482958926}
-  m_Layer: 27
+  m_Layer: 5
   m_Name: Ray Tracing Output
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -106,7 +105,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8728117414957832611}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
@@ -141,7 +139,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Texture: {fileID: 8400000, guid: f154d97feee8e9941af4e8cf03a66be4, type: 2}
+  m_Texture: {fileID: 0}
   m_UVRect:
     serializedVersion: 2
     x: 0

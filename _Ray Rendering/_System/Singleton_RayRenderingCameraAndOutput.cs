@@ -8,10 +8,12 @@ namespace QuizCanners.VolumeBakedRendering
 {
     [ExecuteAlways]
     [AddComponentMenu(QcUtils.QUIZCANNERS + "/Ray Tracing/Camera And Output")]
-    internal class Singleton_RayRenderingCameraAndOutput : Singleton.BehaniourBase
+    public class Singleton_RayRenderingCameraAndOutput : Singleton.BehaniourBase
     {
         public Camera WorldCamera;
         public GameObject RayTracingOutput;
+
+        private readonly ShaderProperty.TextureValue ScreenGrabTexture = new("qc_GeometryRender");
 
         [SerializeField] internal LayerMask rayTracingResultUiMask;
         [SerializeField] internal LayerMask defaultCameraMask;
@@ -20,27 +22,69 @@ namespace QuizCanners.VolumeBakedRendering
 
         [NonSerialized] private int _oldFlags;
 
+        public CameraOutputMode Mode { get; private set; }
+
+        private RenderTexture _targetTexture;
+
+        public enum CameraOutputMode 
+        {
+            Standard,
+            TracingResult,
+            ToRenderTexture
+        }
+
+        private readonly Gate.Bool _showingTracing = new();
+
+        public bool TryRenderTo(RenderTexture texture) 
+        {
+            if (_showingTracing.CurrentValue)
+                return false;
+
+            _targetTexture = texture;
+            WorldCamera.targetTexture = _targetTexture;
+            Mode = CameraOutputMode.ToRenderTexture;
+            ScreenGrabTexture.GlobalValue = texture;
+            return true;
+        }
+
+        public void StopRenderingToRenderTexture() 
+        {
+            if (_showingTracing.CurrentValue)
+                return;
+
+            _targetTexture = null;
+            WorldCamera.targetTexture = null;
+            Mode = CameraOutputMode.Standard;
+        }
+
         public bool ShowTracing
         {
             set
             {
+                if (!_showingTracing.TryChange(value))
+                    return;
+
+                if (value)
+                    Mode = CameraOutputMode.ToRenderTexture;
+                else
+                    Mode = _targetTexture ? CameraOutputMode.ToRenderTexture : CameraOutputMode.Standard;
+
                 if (!RayTracingOutput)
                     QcLog.ChillLogger.LogErrorOnce("{0} is missing".F(nameof(RayTracingOutput)), key: "noRtOpt", this);
                 else
                     RayTracingOutput.SetActive(value);
 
                 if (!WorldCamera)
-                    QcLog.ChillLogger.LogErrorOnce("{0} is missing".F(nameof(WorldCamera)), key: "noWCOpt", this);
-                else
                 {
-                    WorldCamera.cullingMask = value ? rayTracingResultUiMask : defaultCameraMask; //, !value);
-                  //  WorldCamera.cullingMask = rayTracingResultUiMask; //, value);
-
-                    WorldCamera.clearFlags = value ? CameraClearFlags.Nothing : _defaultClearFlags;
-
-                    if (!value)
-                        WorldCamera.targetTexture = null;
+                    QcLog.ChillLogger.LogErrorOnce("{0} is missing".F(nameof(WorldCamera)), key: "noWCOpt", this);
+                    return;
                 }
+
+                WorldCamera.cullingMask = value ? rayTracingResultUiMask : defaultCameraMask; 
+                WorldCamera.clearFlags = value ? CameraClearFlags.Nothing : _defaultClearFlags;
+
+                if (!value)
+                    WorldCamera.targetTexture = _targetTexture;
             }
         }
 

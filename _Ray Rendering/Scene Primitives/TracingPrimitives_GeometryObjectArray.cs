@@ -1,3 +1,4 @@
+using PainterTool;
 using QuizCanners.Inspect;
 using QuizCanners.Utils;
 using System;
@@ -17,7 +18,7 @@ namespace QuizCanners.VolumeBakedRendering
        
 
         [Serializable]
-        internal class GeometryObjectArray : IGotName, IPEGI, IPEGI_Handles
+        internal class GeometryObjectArray : IGotName, IPEGI, IPEGI_Handles, INeedAttention
         {
            
             [SerializeField] private string _parameterName;
@@ -81,47 +82,44 @@ namespace QuizCanners.VolumeBakedRendering
 
             private BoxesSortingStage _sortingStage;
 
-            public bool IsGroupingDone => handle.IsCompleted;
+            public bool IsJobCompletedDone => _sortingStage == BoxesSortingStage.Completed || handle.IsCompleted;
 
             private enum BoxesSortingStage { Uninitialized, JobStarted, Completed }
 
             void GenerateBinarySearchTree()
             {
-                // _totalBoxes
+                if (_totalBoxes < 2)
+                    return;
+                
+                _binaryTreePartition = new(center: _allElementsBox.Center, size: _allElementsBox.Size, 0);
 
-                // _boundingPositionAll.GlobalValue = _allElementsBox.Center;
-                //  _boundingExtendsAll.GlobalValue = _allElementsBox.Extents.ToVector4(boxIndex);//elementsToGroup.Count);
-
-                //  _boundingPosition.GlobalValue = boundingPosition;
-                // _boundingExtents.GlobalValue = boundingExtents;
-
-                if (_totalBoxes > 1)
+                if (VolumeTracing.TryGetLatestCfg(out var vol))
                 {
-                    _binaryTreePartition = new(center: _allElementsBox.Center, size: _allElementsBox.Size);
-
-                    for (int i = 0; i < _totalBoxes; i++)
-                    {
-                        var leaf = new Leaf
-                        {
-                            Box = new BoundingBoxCalculator
-                            {
-                                Center = boundingPosition[i],
-                                Size = boundingExtents[i]
-                            },
-                            index = i
-                        };
-
-                        _binaryTreePartition.Consume(leaf);
-                    }
-
-                    int nodeIndex = 0;
-                    _binaryTreePartition.IndexNodes(ref nodeIndex);
-                    _binaryTreePartition.GenerateTree(binaryTree_Positions, binaryTree_Sizes);
-
-                    _binaryTree_Position.GlobalValue = binaryTree_Positions;
-                    _binaryTree_Sizes.GlobalValue = binaryTree_Sizes;
-                    _binaryTree_Count.GlobalValue = new Vector4(nodeIndex, 0, 0, 0);
+                    _binaryTreePartition.RequestABranch(center: vol.DesiredCenter, size: vol.GetSize() * 1.5f);
                 }
+
+                for (int i = 0; i < _totalBoxes; i++)
+                {
+                    var leaf = new Leaf
+                    {
+                        Box = new BoundingBoxCalculator
+                        {
+                            Center = boundingPosition[i],
+                            Size = boundingExtents[i]
+                        },
+                        index = i
+                    };
+
+                    _binaryTreePartition.Consume(leaf);
+                }
+
+                int nodeIndex = 0;
+                _binaryTreePartition.IndexNodes(ref nodeIndex);
+                _binaryTreePartition.GenerateTree(binaryTree_Positions, binaryTree_Sizes);
+
+                _binaryTree_Position.GlobalValue = binaryTree_Positions;
+                _binaryTree_Sizes.GlobalValue = binaryTree_Sizes;
+                _binaryTree_Count.GlobalValue = new Vector4(nodeIndex, 0, 0, 0);
             }
 
 
@@ -500,7 +498,7 @@ namespace QuizCanners.VolumeBakedRendering
                       //  "Rotation".PegiLabel().ToggleIcon(ref SupportsRotation).Nl();
                     }
 
-                    if ("Registered Primitives [{0}]".F(SortedElements.Length).PegiLabel().IsEntered().Nl())
+                    if ("Registered Primitives [{0}]".F(SortedElements == null ? "null" : SortedElements.Length.ToString()).PegiLabel().IsEntered().Nl())
                     {
                         "Sorted elements".PegiLabel().Edit_Array(ref SortedElements).Nl();
                     }
@@ -603,11 +601,24 @@ namespace QuizCanners.VolumeBakedRendering
                 foreach (var b in elementsToGroup)
                     b.OnSceneDraw_Nested();*/
 
-                
-                for (int i = 0; i < _totalBoxes; i++)
+                using (pegi.SceneDraw.SetColorDisposible(Color.gray))
                 {
-                    pegi.Handle.DrawWireCube(boundingPosition[i], boundingExtents[i] * 2);
+                    for (int i = 0; i < _totalBoxes; i++)
+                    {
+                        pegi.Handle.DrawWireCube(boundingPosition[i], boundingExtents[i] * 2);
+                    }
                 }
+            }
+
+            public string NeedAttention()
+            {
+                if (_sortingStage == BoxesSortingStage.Completed) 
+                {
+                    if (_totalBoxes == 1)
+                        return "Got only one box. Sorting couldn't process. Nothing will be shown";
+                }
+
+                return null;
             }
 
             #endregion

@@ -70,7 +70,7 @@ namespace QuizCanners.SpecialEffects
 
         private readonly Gate.Bool _initialized = new();
 
-        private readonly LayeredFogSettings _settings = new();
+        private readonly Settings _settings = new();
 
         const CameraEvent BEFORE_OPAQUE = CameraEvent.BeforeForwardOpaque;
         const CameraEvent AFTER_SKY_BOX = CameraEvent.AfterSkybox;
@@ -125,7 +125,7 @@ namespace QuizCanners.SpecialEffects
 
             SetMatrix();
 
-            if (_settings.ActualVisibility <= 0) 
+            if (_settings.CurrentVisibility <= 0) 
             {
                 Clear();
                 return;
@@ -246,20 +246,14 @@ namespace QuizCanners.SpecialEffects
         }
         #endregion
 
-        private class LayeredFogSettings : ICfgCustom, IPEGI_ListInspect, IPEGI
+        private class Settings : ICfgCustom, IPEGI_ListInspect, IPEGI
         {
             private readonly ShaderProperty.FloatFeature _visibility = new(name: "qc_LayeredFog_Alpha", featureDirective: "qc_LAYARED_FOG");
             private readonly ShaderProperty.FloatValue _distance = new(name: "qc_LayeredFog_Distance");
 
             private float _targetVisibility;
 
-            private float Visibility_Internal
-            {
-                get => _visibility.latestValue;
-                set => _visibility.GlobalValue = value;
-            }
-
-            public float ActualVisibility
+            public float CurrentVisibility
             {
                 get => _visibility.latestValue;
                 set => _visibility.GlobalValue = value;
@@ -267,8 +261,7 @@ namespace QuizCanners.SpecialEffects
 
             public void Hide() 
             {
-                Visibility_Internal = 0;
-                _targetVisibility = 0;
+                CurrentVisibility = 0;
             }
 
             public float Distance
@@ -286,7 +279,7 @@ namespace QuizCanners.SpecialEffects
                 this.DecodeTagsFrom(data);
 
                 if (!Application.isPlaying)
-                    Visibility_Internal = _targetVisibility;
+                    CurrentVisibility = _targetVisibility;
             }
 
             public void DecodeTag(string key, CfgData data)
@@ -308,13 +301,13 @@ namespace QuizCanners.SpecialEffects
             #region Inspector
             public void Inspect()
             {
-                "Visibility".PegiLabel().Edit_01(ref _targetVisibility).Nl(()=> ActualVisibility = _targetVisibility);
+                "Visibility".PegiLabel().Edit_01(ref _targetVisibility).Nl(()=> CurrentVisibility = _targetVisibility);
                 _distance.Nested_Inspect().Nl();
             }
 
             public void InspectInList(ref int edited, int index)
             {
-                "Layered Fog".PegiLabel(90).Edit_01(ref _targetVisibility).OnChanged(()=> ActualVisibility = _targetVisibility);
+                "Layered Fog".PegiLabel(90).Edit_01(ref _targetVisibility).OnChanged(()=> CurrentVisibility = _targetVisibility);
 
                 if (_targetVisibility > 0 && Distance < 1) 
                 {
@@ -331,16 +324,14 @@ namespace QuizCanners.SpecialEffects
             internal void ManagedUpdate()
             {
 
-                if (Visibility_Internal != _targetVisibility)
-                    Visibility_Internal = QcLerp.LerpBySpeed(Visibility_Internal, _targetVisibility, 0.1f, unscaledTime: true);
+                if (CurrentVisibility != _targetVisibility)
+                    CurrentVisibility = QcLerp.LerpBySpeed(CurrentVisibility, _targetVisibility, 0.1f, unscaledTime: true);
             }
 
             internal void ManagedOnEnable() 
             {
-                    Hide();
+                Hide();
             }
-
-       
         }
 
     }

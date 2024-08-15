@@ -10,18 +10,18 @@ namespace QuizCanners.VolumeBakedRendering
     public static partial class QcRender
     {
         [Serializable]
-        internal class TracerManager : IPEGI, ILinkedLerping, ICfgCustom, IPEGI_ListInspect
+        internal class RenderingOutputManager : IPEGI, ILinkedLerping, ICfgCustom, IPEGI_ListInspect
         {
             [SerializeField] public SO_RayRendering_TracerConfigs Configs;
-            [SerializeField] private RayRenderingTarget _target;
+            [SerializeField] private RenderingMode _target;
 
-            private const string INTERSECTION = "INTERSECTION";
-            private const string MARCHING = "IS_RAY_MARCHING";
-            private const string MARCHING_PROGRESSIVE = "IS_PROGRESSIVE_MARCHING";
+            private const string RAY_TRACING = "INTERSECTION";
+            private const string RAY_MARCHING = "IS_RAY_MARCHING";
+            private const string RAY_MARCHING_PROGRESSIVE = "IS_PROGRESSIVE_MARCHING";
 
-            private readonly ShaderProperty.KeywordEnum RAY_RENDERING_METHOD = new(name: "RAY_RENDERING_METHOD", INTERSECTION, MARCHING, MARCHING_PROGRESSIVE);
+            private readonly ShaderProperty.KeywordEnum RAY_RENDERING_METHOD = new(name: "RAY_RENDERING_METHOD", RAY_TRACING, RAY_MARCHING, RAY_MARCHING_PROGRESSIVE);
    
-            internal RayRenderingTarget Target
+            internal RenderingMode Target
             {
                 get => _target;
                 set
@@ -30,10 +30,11 @@ namespace QuizCanners.VolumeBakedRendering
 
                     switch (value) 
                     {
-                        case RayRenderingTarget.Disabled: RAY_RENDERING_METHOD[-1] = true; break;
-                        case RayRenderingTarget.RayIntersection: RAY_RENDERING_METHOD[0] = true; break;
-                        case RayRenderingTarget.RayMarching: RAY_RENDERING_METHOD[1] = true; break;
-                        case RayRenderingTarget.ProgressiveRayMarching: RAY_RENDERING_METHOD[2] = true; break;
+                        case RenderingMode.Disabled: RAY_RENDERING_METHOD.DisableAll(); break;
+
+                        case RenderingMode.RayTracing: RAY_RENDERING_METHOD.Set(0); break;
+                        case RenderingMode.RayMarching: RAY_RENDERING_METHOD.Set(1); break;
+                        case RenderingMode.ProgressiveRayMarching: RAY_RENDERING_METHOD.Set(2); break;
                     }
                 }
             }
@@ -85,7 +86,7 @@ namespace QuizCanners.VolumeBakedRendering
                 {
                     case "sm": data.DecodeOverride(ref smoothness); break;
                     case "shSo": data.DecodeOverride(ref shadowSoftness); break;
-                    case "targ": Target = (RayRenderingTarget)data.ToInt(); break;
+                    case "targ": Target = (RenderingMode)data.ToInt(); break;
 
                     case "dofD": data.DecodeOverride(ref DOFdistance); break;
                     case "dofPow": DOF_STRENGTH.TargetValue = data.ToFloat(); break;
@@ -113,7 +114,7 @@ namespace QuizCanners.VolumeBakedRendering
                 ConfigurationsSO_Base.Inspect(ref Configs);
 
 
-                if (Target == RayRenderingTarget.RayMarching || Target == RayRenderingTarget.ProgressiveRayMarching || Target == RayRenderingTarget.Volume)
+                if (Target == RenderingMode.RayMarching || Target == RenderingMode.ProgressiveRayMarching || Target == RenderingMode.Rasterization)
                 {
                     "RAY-MARCHING".PegiLabel(pegi.Styles.ListLabel).Nl();
 
@@ -129,12 +130,12 @@ namespace QuizCanners.VolumeBakedRendering
                     pegi.Nested_Inspect(ref shadowSoftness).Nl();
                 }
 
-                if (Target == RayRenderingTarget.RayIntersection || Target == RayRenderingTarget.Volume)
+                if (Target == RenderingMode.RayTracing || Target == RenderingMode.Rasterization)
                 {
                     "RAY-TRACING".PegiLabel(pegi.Styles.ListLabel).Nl();
                 }
 
-                if (Target != RayRenderingTarget.Volume)
+                if (Target != RenderingMode.Rasterization)
                 {
                     "DOF".PegiLabel().Nl();
                     pegi.Nested_Inspect(ref DOFdistance).Nl();
@@ -149,14 +150,14 @@ namespace QuizCanners.VolumeBakedRendering
 
             public void Inspect_Select() 
             {
-                RayRenderingTarget trg = Target;
+                RenderingMode trg = Target;
                 if (pegi.Edit_Enum(ref trg).IgnoreChanges())
                     Target = trg;
             }
 
             public void InspectInList(ref int edited, int ind)
             {
-                "Tracing".PegiLabel(70).ClickEnter(ref edited, ind);
+                "Rendering".PegiLabel(70).ClickEnter(ref edited, ind);
 
                 Inspect_Select();
 
@@ -181,7 +182,7 @@ namespace QuizCanners.VolumeBakedRendering
 
             public void Lerp(LerpData ld, bool canSkipLerp)
             {
-                var isMarching = Target == RayRenderingTarget.RayMarching || Target == RayRenderingTarget.ProgressiveRayMarching;
+                var isMarching = Target == RenderingMode.RayMarching || Target == RenderingMode.ProgressiveRayMarching;
 
                 RAY_MARCHSMOOTHNESS.Lerp(ld, canSkipLerp || !isMarching);
                 RAY_MARCH_SHADOW_SMOOTHNESS.Lerp(ld, canSkipLerp || !isMarching);

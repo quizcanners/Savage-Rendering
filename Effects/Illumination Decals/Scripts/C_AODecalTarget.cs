@@ -121,7 +121,6 @@ namespace QuizCanners.SpecialEffects
             }
         }
 
-#if UNITY_EDITOR
         private readonly Gate.Integer _bakerVersion = new();
 
         void IPEGI.Inspect()
@@ -159,7 +158,6 @@ namespace QuizCanners.SpecialEffects
             float shad = Shadow;
             "Shadow (B)".PegiLabel(50).Edit(ref shad, 0, 1).Nl(() => Shadow = shad);            
         }
-#endif
 
         void Reset() 
         {

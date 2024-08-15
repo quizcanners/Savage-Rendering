@@ -263,6 +263,6 @@ Shader "QcRendering/Geometry/Additive Lit"
 			}
 
 		}
-		Fallback "Diffuse"
+		//Fallback "Diffuse"
 	}
 }

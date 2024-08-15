@@ -27,6 +27,9 @@ namespace QuizCanners.VolumeBakedRendering
             private int _totalLeafCount;
             private Leaf _theLeaf;
             private bool _branched;
+            private readonly int _depth = 0;
+
+            public bool PredeterminedVolume;
 
             private BinaryTreeBranch _leftBranch;
             private BinaryTreeBranch _rightBranch;
@@ -77,9 +80,6 @@ namespace QuizCanners.VolumeBakedRendering
                 _branchIndex = index;
                 index++;
 
-                if (!_branched)
-                    return;
-
                 _leftBranch.IndexNodes(ref index);
                 _rightBranch.IndexNodes(ref index);
             }
@@ -126,7 +126,7 @@ namespace QuizCanners.VolumeBakedRendering
                         return;
                     }
 
-                    if (_rightBranch.OptimallyContains(leafToAdd, out float addedVolumeRight))
+                    if (_leftBranch.PredeterminedVolume || _rightBranch.OptimallyContains(leafToAdd, out float addedVolumeRight))
                     {
                         _rightBranch.Consume(leafToAdd);
                         return;
@@ -154,8 +154,8 @@ namespace QuizCanners.VolumeBakedRendering
                     // Halving size along the longer axis
                     size -= splitter * 0.5f;
 
-                    _leftBranch = new(center - splitter * 0.25f, size);
-                    _rightBranch = new(center + splitter * 0.25f, size);
+                    _leftBranch = new(center - splitter * 0.25f, size, _depth);
+                    _rightBranch = new(center + splitter * 0.25f, size, _depth);
 
                     Vector3 GetLongestSide()
                     {
@@ -172,25 +172,48 @@ namespace QuizCanners.VolumeBakedRendering
                 }
             }
 
+            public void RequestABranch(Vector3 center, Vector3 size) 
+            {
+                if (_branched) 
+                {
+                    _rightBranch.RequestABranch(center, size);
+                    return;
+                }
+
+                _branched = true;
+                _leftBranch = new(center, size, _depth)
+                {
+                    PredeterminedVolume = true
+                };
+                _rightBranch = new(center: ActualBox.Center, size: ActualBox.Size, _depth);
+            }
+
             #region Inspector
             public void OnSceneDraw()
             {
                 if (!_branched)
                     return;
 
-                ActualBox.OnSceneDraw();
+                if (PredeterminedVolume)
+                    ActualBox.OnSceneDraw(Color.blue);
+                else
+                    ActualBox.OnSceneDraw(GetColorFromDepth());
 
-                if (_leftBranch!= null)
-                    _leftBranch.OnSceneDraw();
+                Color GetColorFromDepth() 
+                {
+                    return Color.Lerp(Color.white, Color.red, _depth/10f);
+                }
 
-                if (_rightBranch != null)
-                    _rightBranch.OnSceneDraw();
+                _leftBranch?.OnSceneDraw();
+                _rightBranch?.OnSceneDraw();
             }
 
             #endregion
 
-            public BinaryTreeBranch(Vector3 center, Vector3 size) 
+            public BinaryTreeBranch(Vector3 center, Vector3 size, int parentDepth) 
             {
+                _depth = parentDepth+1;
+
                 OptimalBox = new()
                 {
                     Center = center,

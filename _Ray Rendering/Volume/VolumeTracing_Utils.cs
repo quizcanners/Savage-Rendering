@@ -18,6 +18,16 @@ namespace QuizCanners.VolumeBakedRendering
 
         public static List<Inst_RtxVolumeSettings> Stack = new();
 
+        public static bool TryGetLatestCfg(out Inst_RtxVolumeSettings cfg)
+        {
+            if (Stack.Count == 0) 
+            {
+                cfg = null;
+                return false;
+            }
+            cfg = Stack[^1];
+            return true;
+        }
         public static void OnDisable(Inst_RtxVolumeSettings cfg) 
         {
             if (Stack.IndexOf(cfg) == Stack.Count - 1)
@@ -60,7 +70,6 @@ namespace QuizCanners.VolumeBakedRendering
                 {
                     if (i == Stack.Count - 1)
                     {
-
                         AddAsCurrent();
                         return;
                     }

@@ -35,16 +35,15 @@ Shader "QcRendering/Terrain/Integration Blanket"
 
             float3 AllignPosition(float3 pos, float3 center)
             {
+              
+                float4 control = Ct_SampleTerrain(pos);
+                float height = Ct_HeightRange.x + control.a * Ct_HeightRange.z;
+   
+                float deltaY = pos.y - center.y;
                 float3x3 m = UNITY_MATRIX_M;
                 float objectScale = length(float3( m[0][0], m[1][0], m[2][0]));
 
                 _ForcedDowning *= objectScale;
-
-                float deltaY = pos.y - center.y;
-
-                float4 control = Ct_SampleTerrain(pos);
-                float height = Ct_HeightRange.x + control.a * Ct_HeightRange.z;
-   
                 float extraDownPush = smoothstep(_ForcedDowning, 0, deltaY);
 
                 pos.y = height + _BlanketOffset + deltaY - extraDownPush * 2 *_ForcedDowning;

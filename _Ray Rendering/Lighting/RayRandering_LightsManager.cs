@@ -8,7 +8,7 @@ namespace QuizCanners.VolumeBakedRendering
     using Lerp;
     using Utils;
     using QuizCanners.SpecialEffects;
-    using static QuizCanners.VolumeBakedRendering.QcRender;
+    using QuizCanners.SavageTurret;
 
     public static partial class QcRender
     {
@@ -20,12 +20,11 @@ namespace QuizCanners.VolumeBakedRendering
             [SerializeField] private Material RaySkybox;
             [SerializeField] private SO_HDRsLoading HDRs;
 
-            private Wind _wind;
 
             private readonly LinkedLerp.ShaderColor AMBIENT_COLOR = new("_qc_AmbientColor", Color.clear, maxSpeed: 2f);
             private readonly ShaderProperty.TextureValue CLOUD_SHADOWS_TEXTURE = new("_qc_CloudShadows_Mask");
             private readonly LinkedLerp.ShaderFloatFeature CLOUD_SHADOWS_VISIBILITY = new("_qc_Rtx_CloudShadowsVisibility", "_qc_CLOUD_SHADOWS");
-            private readonly LinkedLerp.ShaderFloatFeature SUN = new(nName: "_qc_SunVisibility", featureDirective: "_qc_USE_SUN");
+            private readonly LinkedLerp.ShaderFloatFeature SUN_INTENSITY = new(nName: "_qc_SunVisibility", featureDirective: "_qc_USE_SUN");
             private readonly LinkedLerp.ShaderColor SUN_COLOR = new("_qc_SunColor", Color.gray, maxSpeed: 2); //"Sun Colo", maxSpeed: 2);
             private readonly LinkedLerp.ShaderFloat SUN_LIGHT_ATTENUATION = new("_qc_Sun_Atten", initialValue: 1);
 
@@ -34,6 +33,7 @@ namespace QuizCanners.VolumeBakedRendering
             private readonly ShaderProperty.Feature INDOORS = new("_qc_IGNORE_SKY");
             private readonly LinkedLerp.ColorValue FOG_COLOR = new("Fog", maxSpeed: 1);
 
+            private readonly ShaderProperty.FloatValue CLASSICAL_FOG = new("_qc_FogVisibility");
           
             private bool _artificialLightsExpected;
 
@@ -51,7 +51,11 @@ namespace QuizCanners.VolumeBakedRendering
                 }
             }
 
-            public float FogParticles;
+            public float ClassicalFog 
+            {
+                get => CLASSICAL_FOG.latestValue;
+                set => CLASSICAL_FOG.SetGlobal(value);
+            }
 
             public bool LerpDone { get; private set; }
 
@@ -59,6 +63,7 @@ namespace QuizCanners.VolumeBakedRendering
 
             private void SetWeatherDirty(string reason) 
             {
+                LightConfigVersion++;
                 _weatherDirtyReason = reason;
                 LerpDone = false;
             }
@@ -76,8 +81,8 @@ namespace QuizCanners.VolumeBakedRendering
 
             public float SunIntensity
             {
-                get => SUN.GlobalValue;
-                set => SUN.GlobalValue = value;
+                get => SUN_INTENSITY.GlobalValue;
+                set => SUN_INTENSITY.GlobalValue = value;
             }
 
             public Color AmbientColor 
@@ -197,14 +202,22 @@ namespace QuizCanners.VolumeBakedRendering
                     case "SnM": SunAndMoon.Decode(data); break;
                     case "Rain": _rainTargetValue = data.ToFloat(); break;
                     case "Amb": AmbientColor = data.ToColor(); break;
-                    case "SunInten":  SUN.TargetValue = data.ToFloat(); break;
+                    case "SunInten":  SUN_INTENSITY.TargetValue = data.ToFloat(); break;
                     case "atten": SUN_LIGHT_ATTENUATION.Decode(data); break;
                     case "ArtLights":  ArtificialLightsExpected = data.ToBool(); break;
                     case "hdr": HDRs.CurrentHDR = data.ToString(); break;
-                    case "wind": _wind.Decode(data); break; // WIND_DIRECTION.Decode(data); break;
                     case "layerFog":
                         if (Singleton.TryGet<Singleton_LayeredVolumetricFog>(out var layerFog))
                             layerFog.Decode(data);
+                        else
+                            Debug.LogError("Volumetric fog Singleton not ready");
+                        break;
+
+                    case "wind":
+                        if (Singleton.TryGet<Singleton_WindManager>(out var wind))
+                            wind.Decode(data);
+                        else
+                            Debug.LogError("Wind manager not found");
                         break;
                 }
             }
@@ -221,14 +234,17 @@ namespace QuizCanners.VolumeBakedRendering
                 .Add("SnM", SunAndMoon)
                 .Add("Rain", RainTargetValue)
                 .Add("Amb", AmbientColor)
-                .Add("SunInten", SUN.TargetValue)
+                .Add("SunInten", SUN_INTENSITY.TargetValue)
                 .Add("atten", SUN_LIGHT_ATTENUATION)
                 .Add_Bool("ArtLights", ArtificialLightsExpected)
                 .Add_String("hdr", HDRs.CurrentHDR)
-                .Add("wind", _wind);
+                ;
 
                 if (Singleton.TryGet<Singleton_LayeredVolumetricFog>(out var layerFog))
                     cody.Add("layerFog", layerFog);
+
+                if (Singleton.TryGet<Singleton_WindManager>(out var wind))
+                    cody.Add("wind", wind);
 
                 return cody;
             }
@@ -258,7 +274,7 @@ namespace QuizCanners.VolumeBakedRendering
                 STARS_VISIBILITY.Portion(ld);
                 AMBIENT_COLOR.Portion(ld);
                // CLOUD_SHADOWS_VISIBILITY.Portion(ld);
-                SUN.Portion(ld);
+                SUN_INTENSITY.Portion(ld);
                 SUN_LIGHT_ATTENUATION.Portion(ld);
               //  WIND_DIRECTION.Portion(ld);
             }
@@ -271,7 +287,7 @@ namespace QuizCanners.VolumeBakedRendering
                 STARS_VISIBILITY.Lerp(ld, canSkipLerp);
                 AMBIENT_COLOR.Lerp(ld, canSkipLerp);
                // CLOUD_SHADOWS_VISIBILITY.Lerp(ld, canSkipLerp);
-                SUN.Lerp(ld, canSkipLerp);
+                SUN_INTENSITY.Lerp(ld, canSkipLerp);
                 SUN_LIGHT_ATTENUATION.Lerp(ld, canSkipLerp);
                // WIND_DIRECTION.Lerp(ld, canSkipLerp);
 
@@ -289,7 +305,7 @@ namespace QuizCanners.VolumeBakedRendering
                     s.MainCam.backgroundColor = FOG_COLOR.CurrentValue;
 
                 if (Singleton.TryGet<Singleton_SunAndMoonRotator>(out var sm))
-                    sm.SunIntensity = SUN.CurrentValue; 
+                    sm.SunIntensity = SUN_INTENSITY.CurrentValue; 
 
                 var ambint = AMBIENT_COLOR.CurrentValue;
 
@@ -316,6 +332,9 @@ namespace QuizCanners.VolumeBakedRendering
                 {
                     if (RenderSettings.ambientMode != UnityEngine.Rendering.AmbientMode.Trilight && "Set Ambient to Trilight".PegiLabel().Click().Nl())
                         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+
+                    if (RenderSettings.defaultReflectionMode != UnityEngine.Rendering.DefaultReflectionMode.Custom && "Set Reflection to custom".PegiLabel().Click())
+                        RenderSettings.defaultReflectionMode = UnityEngine.Rendering.DefaultReflectionMode.Custom;
 
                     pegi.Nl();
 
@@ -357,9 +376,9 @@ namespace QuizCanners.VolumeBakedRendering
                             SUN_COLOR.TargetValue = col;
                         }
 
-                        var inten = SUN.TargetValue;
+                        var inten = SUN_INTENSITY.TargetValue;
                         if ("Intensity".PegiLabel(70).Edit(ref inten, 0, 5).Nl())
-                            SUN.TargetValue = inten;
+                            SUN_INTENSITY.TargetValue = inten;
 
                         var atten = SUN_LIGHT_ATTENUATION.TargetValue;
                         if ("Attenuation".PegiLabel(70).Edit(ref atten, 0, 6).Nl())
@@ -413,13 +432,11 @@ namespace QuizCanners.VolumeBakedRendering
 
                     }
 
-                    //WIND_DIRECTION.Enter_Inspect().Nl().IgnoreChanges();
-
-                    _wind.Enter_Inspect_AsList().Nl();
-
                     if (Singleton.TryGet<Singleton_LayeredVolumetricFog>(out var layerFog))
                         layerFog.Enter_Inspect().Nl();
 
+                    if (Singleton.TryGet<Singleton_WindManager>(out var windMgmt))
+                        windMgmt.Enter_Inspect().Nl();
 
                     if ("Configs".PegiLabel().IsEntered().Nl())
                     {

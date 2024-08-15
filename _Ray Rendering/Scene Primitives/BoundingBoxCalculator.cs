@@ -125,6 +125,14 @@ namespace QuizCanners.VolumeBakedRendering
             pegi.Handle.DrawWireCube(Center, Size);
         }
 
+        public void OnSceneDraw(Color color)
+        {
+            using (pegi.SceneDraw.SetColorDisposible(color))
+            {
+                pegi.Handle.DrawWireCube(Center, Size);
+            }
+        }
+
         public override string ToString() => "From {0} to {1} - {2} m3".F(Min, Max, Volume);
 
         void IPEGI.Inspect()

@@ -7,12 +7,12 @@ namespace QuizCanners.VolumeBakedRendering
     {
         internal static Singleton_QcRendering Mgmt => Singleton.Get<Singleton_QcRendering>();
 
-        public enum RayRenderingTarget 
+        public enum RenderingMode 
         { 
             Disabled = 0, 
-            RayIntersection = 1, 
+            RayTracing = 1, 
             RayMarching = 2, 
-            Volume = 3, 
+            Rasterization = 3, 
             ProgressiveRayMarching = 4 
         }
 

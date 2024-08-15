@@ -134,6 +134,8 @@
 				if (blackPixel == 1)
 					return float4(0,0,0,1);
 
+
+				//worldPos += sdf0.xyz;
 			//	float sdfOffsetAmount = smoothstep(VOL_SIZE, 0, nrmDist.w);
 			
 

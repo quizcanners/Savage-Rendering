@@ -94,15 +94,22 @@ void WorldHit_Dynamic(float3 ro, in float3 rd, inout float3 d, inout float3 norm
 // Hit Box
 bool isHit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, float3 m)
 {
-	int elementsToProcess[16]; // unlikely to ever be more
-	elementsToProcess[0] = 0;
-	int freeSpace = 1;
+	if (RayMarchCube_BinaryTree_Count.x<2)
+		return false;
 
+	int elementsToProcess[16]; // unlikely to ever be more
+
+	elementsToProcess[0] = RayMarchCube_BinaryTree_PosNL[0].w;
+	elementsToProcess[1] = RayMarchCube_BinaryTree_SizeNR[0].w;
+	int freeSpace = 2;
+
+	UNITY_BRANCH
 	while (freeSpace >0) 
 	{
-		int index = elementsToProcess[freeSpace-1];
 		freeSpace--;
-
+		int index = elementsToProcess[freeSpace];
+		
+		UNITY_BRANCH
 		if (index <0)
 		{
 			// We got Leaf
@@ -142,9 +149,14 @@ bool isHit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, float3 m)
 
 bool isHit_bin_box_unrot(float3 ro, in float3 rd, inout float3 d, float3 m)
 {
+	if (RayMarchUnRot_BinaryTree_Count.x<2)
+		return false;
+
 	int elementsToProcess[16]; // unlikely to ever be more
-	elementsToProcess[0] = 0;
-	int freeSpace = 1;
+
+	elementsToProcess[0] = RayMarchUnRot_BinaryTree_PosNL[0].w;
+	elementsToProcess[1] = RayMarchUnRot_BinaryTree_SizeNR[0].w;
+	int freeSpace = 2;
 
 	while (freeSpace >0) 
 	{
@@ -252,9 +264,14 @@ bool RaycastStaticPhisics(float3 ro, in float3 rd, in float2 dist) {
 
 void hit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, inout float3 normal, inout float4 mat, float3 m) 
 {
+	if (RayMarchCube_BinaryTree_Count.x<2)
+		return;
+
 	int elementsToProcess[16]; // unlikely to ever be more
-	elementsToProcess[0] = 0;
-	int freeSpace = 1;
+
+	elementsToProcess[0] = RayMarchCube_BinaryTree_PosNL[0].w;
+	elementsToProcess[1] = RayMarchCube_BinaryTree_SizeNR[0].w;
+	int freeSpace = 2;
 
 	while (freeSpace >0) 
 	{
@@ -295,9 +312,14 @@ void hit_bin_box_rot(float3 ro, in float3 rd, inout float3 d, inout float3 norma
 
 void hit_bin_box_unrot(float3 ro, in float3 rd, inout float3 d, inout float3 normal, inout float4 mat, float3 m) 
 {
+	if (RayMarchUnRot_BinaryTree_Count.x<2)
+		return;
+
 	int elementsToProcess[16]; // unlikely to ever be more
-	elementsToProcess[0] = 0;
-	int freeSpace = 1;
+
+	elementsToProcess[0] = RayMarchUnRot_BinaryTree_PosNL[0].w;
+	elementsToProcess[1] = RayMarchUnRot_BinaryTree_SizeNR[0].w;
+	int freeSpace = 2;
 
 	while (freeSpace >0) 
 	{
@@ -351,11 +373,9 @@ float3 worldhit(float3 ro, in float3 rd, in float2 dist, out float3 normal, inou
 
 	float3 dTmp = d;
 
-	if (RayMarchCube_BinaryTree_Count.x>0)
-		hit_bin_box_rot(ro, rd, d, normal, mat, m);
+	hit_bin_box_rot(ro, rd, d, normal, mat, m);
 
-	if (RayMarchUnRot_BinaryTree_Count.x>0)
-		hit_bin_box_unrot(ro, rd, d, normal, mat, m);
+	hit_bin_box_unrot(ro, rd, d, normal, mat, m);
 
 	#if defined(RENDER_DYNAMICS)
 

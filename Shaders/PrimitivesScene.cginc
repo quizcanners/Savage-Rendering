@@ -137,7 +137,7 @@ float3 SampleSkyBox(float3 rd, float smoothness)
 		return 0;
 	#endif
 
-	rd.y = -abs(rd.y);
+	//rd.y = -abs(rd.y);
 
 	return lerp(texCUBElod(Qc_SkyBox, float4(rd,(1-smoothness) * 5)).rgb, GetAmbientLight(), _qc_AmbientColor.a);
 }

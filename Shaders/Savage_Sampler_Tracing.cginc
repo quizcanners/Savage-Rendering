@@ -50,10 +50,10 @@ float3 SampleRay_NoSun_MipSky(float3 pos, float3 ray, float smoothness, out RayS
 
 		#if !_qc_IGNORE_SKY
 			
-			float shadow = GetSunShadowsAttenuation(hit.Pos);
+			//float shadow = GetSunShadowsAttenuation(hit.Pos);
 
-			if (shadow > 0.1)
-				shadow *= SampleRayShadowAndAttenuation(hit.Pos, hit.Normal);
+			//if (shadow > 0.1)
+				float shadow = SampleRayShadowAndAttenuation(hit.Pos, hit.Normal);
 
 			bake += GetDirectional() *shadow; //
 		#endif

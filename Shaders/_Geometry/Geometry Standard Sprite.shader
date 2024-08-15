@@ -3,6 +3,7 @@ Shader "QcRendering/Geometry/Standard Sprite"
 	Properties
 	{
 		_MainTex("Albedo (RGB)", 2D) = "clear" {}
+		[Toggle(_VERT_COLOR)] multiplyByVertex("Multiply by Vertex color", Float) = 0
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_SpecularMap("R-Metalic G-Ambient _ A-Specular", 2D) = "white" {}
 		[HDR] _SubSurface("Sub Surface Color", Color) = (1,0.5,0,0)
@@ -49,6 +50,7 @@ Shader "QcRendering/Geometry/Standard Sprite"
 				#pragma multi_compile_fwdbase
 				#pragma skip_variants LIGHTPROBE_SH LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON SHADOWS_SHADOWMASK LIGHTMAP_SHADOW_MIXING
 				#pragma shader_feature_local ___ _SUB_SURFACE
+				#pragma shader_feature_local ___ _VERT_COLOR
 				
 				struct v2f
 				{
@@ -140,7 +142,12 @@ Shader "QcRendering/Geometry/Standard Sprite"
 					float3 lightDiffuse = lightColor * smoothstep(0,0.25, facingSun);
 
 			
-					float4 tex = tex2D(_MainTex, uv);
+					float4 tex = tex2D(_MainTex, uv)
+						#if _VERT_COLOR
+							* i.color
+						#endif
+						;
+
 					float3 col = tex.rgb * (lightDiffuse + bake * ao);
 
 					//return tex;

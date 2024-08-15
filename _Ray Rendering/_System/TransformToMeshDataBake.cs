@@ -113,6 +113,9 @@ namespace QuizCanners.VolumeBakedRendering
                 originalMesh = meshFilter.sharedMesh;
             }
 
+            if (!meshFilter.sharedMesh && originalMesh)
+                meshFilter.sharedMesh = originalMesh;
+
             UpdateMeshData();
         }
 
@@ -173,6 +176,29 @@ namespace QuizCanners.VolumeBakedRendering
                     && Application.isPlaying
                  && !QcUnity.IsPartOfAPrefab(go))
                     pegi.Click(UpdateMeshData).Nl();
+
+
+                "Original Mesh".PegiLabel().Edit(ref originalMesh).Nl();
+
+                if (meshFilter && !meshFilter.sharedMesh) 
+                {
+                    "No Mesh".PegiLabel().Write();
+
+                    if (meshInstance)
+                        "Apply Instance".PegiLabel().Click(()=> meshFilter.sharedMesh = meshInstance);
+
+
+                    if (originalMesh)
+                        if ("Apply Original".PegiLabel().Click())
+                        {
+                            meshFilter.sharedMesh = originalMesh;
+                            meshInstance.DestroyWhateverUnityObject();
+                            meshInstance = null;
+                        }
+
+                    pegi.Nl();
+                }
+
             }
 
             "Dynamic batching needs to be enabled for this to work correctly".PegiLabel().Write_Hint().Nl();

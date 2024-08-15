@@ -8,7 +8,7 @@ namespace QuizCanners.VolumeBakedRendering
     public static partial class QcRender
     {
         [Serializable]
-        internal class TracingPrimitivesManager : IPEGI, IPEGI_ListInspect, INeedAttention
+        internal class TemporalAccumulationManager : IPEGI, IPEGI_ListInspect, INeedAttention
         {
             [NonSerialized] public float StableFrames;
             [NonSerialized] private Vector3 _previousCamPosition = Vector3.zero;
@@ -54,7 +54,7 @@ namespace QuizCanners.VolumeBakedRendering
                         CameraMotion = (_previousCamPosition - position).magnitude * 10 +
                                            Quaternion.Angle(_previousCamRotation, rotation);
 
-                        if (Mgmt.Target == RayRenderingTarget.ProgressiveRayMarching)
+                        if (Mgmt.Target == RenderingMode.ProgressiveRayMarching)
                             CameraMotion *= 10000;
 
                         _previousCamPosition = position;
@@ -78,7 +78,7 @@ namespace QuizCanners.VolumeBakedRendering
             #region Inspector
             public void InspectInList(ref int edited, int ind)
             {
-                "Scene".PegiLabel().ClickEnter(ref edited, ind);
+                ToString().PegiLabel().ClickEnter(ref edited, ind);
             }
 
             void IPEGI.Inspect()
@@ -87,7 +87,7 @@ namespace QuizCanners.VolumeBakedRendering
                 TracingPrimitives.Inspect();
             }
 
-            public override string ToString() => "Tracing Primitives";
+            public override string ToString() => "Temporal Accumulation";
 
             public string NeedAttention()
             {

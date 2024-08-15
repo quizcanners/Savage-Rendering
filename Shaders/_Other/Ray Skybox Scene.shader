@@ -36,7 +36,6 @@
 			#pragma multi_compile ___ _ROTATE_SKYBOX
 
 			#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Standard.cginc"
-
 			#pragma target 3.0
 
 			struct v2f {
@@ -194,14 +193,14 @@
 
 				finalColor.rgb += _LightColor0.rgb * sun * isUp;
 
+				finalColor.rgb = TonemapColor(finalColor.rgb);
+
 				if (_qc_FogVisibility > 0)
 				{
 					float3 fogCol = GetAvarageAmbient(viewDir);
 
 					finalColor.rgb = lerp(finalColor, fogCol, (1-isUp) * _qc_FogVisibility);
 				}
-
-
 
 				return 	finalColor;
 			}
