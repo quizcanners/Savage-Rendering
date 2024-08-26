@@ -167,17 +167,15 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 			float terrainHeight;
 			SampleTerrainHeight(pos, terrainHeight);
 
-			float toTerrain = pos.y - terrainHeight;
+			float toTerrain = pos.y * 1.5f - terrainHeight;
 
-			float ignoreTerrain = saturate(level/4);
+			float ignoreTerrain = saturate(level/16);
 
-			//visibilityMode *= lerp(0.25 + 1/(1+ abs(toTerrain * 0.02)), 1, ignoreTerrain); 
+			visibilityMode *= 2/(1+ abs(toTerrain * 0.02)); // lerp(1/(1+ abs(toTerrain * 0.01)), 1, ignoreTerrain); 
 
-		#endif
+		#else
 
 		float intensity = qc_WindParameters.y;
-
-		
 
 		if (intensity > 0.01)
 		{
@@ -195,7 +193,7 @@ float4 SampleVolumetricLight(float3 pos, float dist, float facingSun)
 
 			 visibilityMode *= lerp(visibilityMode, 1.25-noise.r, intensity * smoothstep(5, 10, dist));
 		}
-
+		#endif
 
 	#endif
 
@@ -272,7 +270,7 @@ float4 TraceVolumetricSegment(float3 rayStart, float3 rayDir, float rayLength, f
 
 
 	result = result / stepsTaken; // finalChunk);
-	result.a *= rayLength/segmentLength;
+	result.a *= rayLength/(segmentLength + 0.01);
 
 	return result;
 }

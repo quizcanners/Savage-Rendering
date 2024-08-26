@@ -15,7 +15,8 @@ namespace QuizCanners.VolumeBakedRendering
 
             private CommandBuffer commandBuffer;
 
-            private Light Sun => Singleton.Get<Singleton_SunAndMoonRotator>().SharedLight;
+            private Light Sun => 
+                Singleton.TryGet<Singleton_SunAndMoonRotator>(out var sunRot) ? sunRot.SharedLight : null;
 
             public void ManagedOnEnable()
             {

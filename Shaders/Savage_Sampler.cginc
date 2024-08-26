@@ -259,21 +259,18 @@ float ApplySubSurface(inout float3 col, float4 subSkin, float3 volSamplePos, flo
 	//float4 skin = tex2D(_SkinMask, i.texcoord.xy);
 	float subSurface = subSkin.a * (2 - rawFresnel) * 0.5;
 
-	//col *= 1 - subSurface;
-
-	float3 forwardBake = SampleVolume_CubeMap(volSamplePos, -viewDir);
-
 	#if !_qc_IGNORE_SKY
 		float sun = 1 / (0.1 + 1000 * sharpstep(1, 0, dot(_WorldSpaceLightPos0.xyz, -viewDir)));
 	#endif
 
-	col.rgb += subSurface * subSkin.rgb * (forwardBake 
+	col.rgb += subSurface * subSkin.rgb * 
 
 	#if !_qc_IGNORE_SKY
-		+ GetDirectional() * (1 + sun) * shadow
+		GetDirectional() * (1 + sun) * shadow
+	#else
+		SampleVolume_CubeMap(volSamplePos, -viewDir)
 	#endif
-
-	);
+	;
 
 	return subSurface;
 }

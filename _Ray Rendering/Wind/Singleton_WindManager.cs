@@ -67,15 +67,8 @@ namespace QuizCanners.SavageTurret
 
         }
 
-        protected override void OnAfterEnable()
-        {
-            base.OnAfterEnable();
-
-            Direction = Vector3.forward;
-            WindFrequency = 0.1f;
-        }
-
         #region Encode & Decode
+
 
         public CfgEncoder Encode() => new CfgEncoder()
             .Add("int", WindIntensity)

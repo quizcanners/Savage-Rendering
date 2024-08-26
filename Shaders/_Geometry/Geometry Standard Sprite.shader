@@ -9,6 +9,7 @@ Shader "QcRendering/Geometry/Standard Sprite"
 		[HDR] _SubSurface("Sub Surface Color", Color) = (1,0.5,0,0)
 		[Toggle(_SUB_SURFACE)] subSurfaceScattering("SubSurface Scattering", Float) = 0
 		_SkinMask("Skin Mask (_UV2)", 2D) = "white" {}
+		[KeywordEnum(None, SIMPLE, VCOLR, VCOLG)] _WIND("Wind mode", Float) = 0
 	}
 
 	Category
@@ -28,10 +29,13 @@ Shader "QcRendering/Geometry/Standard Sprite"
 
 				#pragma multi_compile ___ _qc_IGNORE_SKY
 				#pragma multi_compile ___ qc_LAYARED_FOG
+				#pragma shader_feature_local _WIND_NONE _WIND_SIMPLE _WIND_VCOLR _WIND_VCOLG 
+
 
 				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Transparent.cginc"
 				#include "Assets/Qc_Rendering/Shaders/Savage_Sampler_Standard.cginc"
 				#include "Assets/Qc_Rendering/Shaders/RayMarching_Forward_Integration.cginc"
+				#include "Assets/Qc_Rendering/Shaders/Savage_Vegetation.cginc"
 
 			ENDCG
 
@@ -79,6 +83,19 @@ Shader "QcRendering/Geometry/Standard Sprite"
 					UNITY_SETUP_INSTANCE_ID(v);
 
 					float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+
+					#if !_WIND_NONE
+						float intensity = 1;
+
+						#if _WIND_VCOLR
+							intensity = v.color.r;
+						#elif _WIND_VCOLG
+							intensity = v.color.g;
+						#endif
+
+						v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, intensity), v.vertex.w));
+						worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+					#endif
 
 					o.pos = UnityObjectToClipPos(v.vertex);
 					o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
@@ -194,7 +211,7 @@ Shader "QcRendering/Geometry/Standard Sprite"
 				#pragma multi_compile_shadowcaster
 				#pragma multi_compile_instancing // allow instanced shadow pass for most of the shaders
 				#include "UnityCG.cginc"
-
+				
 				struct v2f 
 				{
 					V2F_SHADOW_CASTER;
@@ -211,7 +228,27 @@ Shader "QcRendering/Geometry/Standard Sprite"
 					v2f o;
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+					#if !_WIND_NONE
+				//	float topDownShadow = TopDownSample_Shadow(worldPos.xyz);
+						float intensity = 1;
+
+						#if _WIND_VCOLR
+							intensity = v.color.r;
+						#elif _WIND_VCOLG
+							intensity = v.color.g;
+						#endif
+
+						float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+						v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, intensity), v.vertex.w));
+						//worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+
+					#endif
+
 					TRANSFER_SHADOW_CASTER_NORMALOFFSET(o);
+
+
+
 					o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
 					return o;
 				}

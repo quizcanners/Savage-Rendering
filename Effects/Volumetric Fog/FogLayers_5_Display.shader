@@ -80,7 +80,8 @@ Shader "Unlit/Fog Layers Display"
             float4 GetAvaragedSampling(float2 uvSegment, float2 internal, float depth)
             {
                   float4 total = 0; 
-                  float totalValidity = 0;
+
+                  float totalValidity = 0.01;
 
                   SampleWeighted(uvSegment, internal, float2(0,0) , depth, total, totalValidity);
 

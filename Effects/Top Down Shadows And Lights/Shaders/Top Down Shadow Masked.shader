@@ -114,7 +114,7 @@ Shader "QcRendering/Top Down/Light And Shadow"
 
 				return i.color * alpha
 				#if !_IGNORE_HEIGHT
-					* 1/(1 + pow(abs(wPosY),2)) * smoothstep(-1.5, 0, wPosY)
+					* 1/(1 + pow(abs(wPosY),6))
 				#endif
 				;
 			}

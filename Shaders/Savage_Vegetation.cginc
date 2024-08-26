@@ -1,8 +1,8 @@
 
 //Savage_VolumeSampling
 
-				#include "Signed_Distance_Functions.cginc"
-	#include "Savage_VolumeSampling.cginc"
+#include "Signed_Distance_Functions.cginc"
+#include "Savage_VolumeSampling.cginc"
 
 float4 qc_WindDirection;
 float4 qc_WindParameters;
@@ -41,16 +41,18 @@ float3 WindShakeWorldPos(float3 worldPos, float shakeCoefficient)
 	gyr = sign(gyr) * (1-pow(1-gyr, 2));
 
 	float3 intenseShaking = intense * gyr;
-
-	worldPos.xyz += intenseShaking * distance * 0.1;// * qc_WindDirection.xyz;
+	
+	float3 totalOffset = 0;
+	
+	totalOffset += intenseShaking * 0.1;// * qc_WindDirection.xyz;
 
 	float offset = sin(qc_WindParameters.x * _Time.x + worldPos.x * 0.03) * sin(qc_WindParameters.x + worldPos.z * 0.1 + _Time.y * 1.234);
 
 	//offset = sign(offset) * (1-pow(1-abs(offset), 1.5));
 
-	worldPos.xyz += shakeCoefficient * distance * qc_WindDirection.xyz * offset; //shake * len * 0.02 * distance; // *(gyr - 0.5);
+	totalOffset += shakeCoefficient * qc_WindDirection.xyz * offset; //shake * len * 0.02 * distance; // *(gyr - 0.5);
 	
-	worldPos.y -= abs(offset) * length(qc_WindDirection.xyz) * 0.2 * distance * shakeCoefficient * shakeCoefficient;
+	totalOffset.y -= abs(offset) * length(qc_WindDirection.xyz) * 0.2 * shakeCoefficient * shakeCoefficient;
 
-	return worldPos;
+	return worldPos + totalOffset * distance;
 }

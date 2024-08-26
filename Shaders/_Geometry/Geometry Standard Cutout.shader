@@ -12,7 +12,11 @@ Shader "QcRendering/Geometry/Standard Cutout"
 		[Toggle(_COLOR_R_AMBIENT)] colAIsAmbient("Vert Col is Ambient", Float) = 0
 		[Toggle(_SDF_AMBIENT)] sdfAmbient("SDF Ambient", Float) = 0
 		[Toggle(_NO_HB_AMBIENT)] noHbAmbient("Disable HBAO", Float) = 0
-		[Toggle(_WIND_SHAKE)] windShake("Wind Shaking", Float) = 0
+
+		//[Toggle(_WIND_SHAKE)] windShake("Wind Shaking", Float) = 0
+		//[Toggle(_WIND_SHAKE_FROM_VERT_COLOR)] windShakeFromVertColor("Wind Shake from vert color", Float) = 0
+
+		[KeywordEnum(None, SIMPLE, VCOLR, VCOLG)] _WIND("Wind mode", Float) = 0
 
 		[Toggle(_BACKFACE_FLIP)] fixBackface("Backface Flip", Float) = 0
 
@@ -60,7 +64,11 @@ Shader "QcRendering/Geometry/Standard Cutout"
 				#pragma multi_compile_fwdbase
 				#pragma skip_variants LIGHTPROBE_SH LIGHTMAP_ON DIRLIGHTMAP_COMBINED DYNAMICLIGHTMAP_ON SHADOWS_SHADOWMASK LIGHTMAP_SHADOW_MIXING
 
-				#pragma shader_feature_local ___ _WIND_SHAKE
+			//	#pragma shader_feature_local ___ _WIND_SHAKE
+			//	#pragma shader_feature_local ___ _WIND_SHAKE_FROM_VERT_COLOR
+				#pragma shader_feature_local _WIND_NONE _WIND_SIMPLE _WIND_VCOLR _WIND_VCOLG 
+
+
 				#pragma shader_feature_local ___ _BACKFACE_FLIP
 				#pragma shader_feature_local ___ _AMBIENT_IN_UV2
 				#pragma shader_feature_local _AO_NONE _AO_MADS _AO_SEPARATE
@@ -120,9 +128,19 @@ Shader "QcRendering/Geometry/Standard Cutout"
 
 					float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
 
-#if _WIND_SHAKE
+					//_WIND_NONE _WIND_SIMPLE _WIND_VCOLR _WIND_VCOLG 
+
+#if !_WIND_NONE
 				//	float topDownShadow = TopDownSample_Shadow(worldPos.xyz);
-					v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, v.color.r), v.vertex.w));
+					float intensity = 1;
+
+					#if _WIND_VCOLR
+						intensity = v.color.r;
+					#elif _WIND_VCOLG
+						intensity = v.color.g;
+					#endif
+
+					v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, intensity), v.vertex.w));
 					worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
 #endif
 
@@ -294,7 +312,7 @@ Shader "QcRendering/Geometry/Standard Cutout"
 
 #					if _SUB_SURFACE
 					float4 skin = tex2D(_SkinMask, i.texcoord.xy) * _SubSurface;
-					ApplySubSurface(col, skin* ao, i.worldPos, viewDir, madsMap.a, rawFresnel, shadow );
+					ApplySubSurface(col, skin * ao, i.worldPos, viewDir, madsMap.a, rawFresnel, shadow );
 #					endif
 
 					ApplyBottomFog(col.rgb, i.worldPos.xyz, viewDir.y);
@@ -321,7 +339,8 @@ Shader "QcRendering/Geometry/Standard Cutout"
 				#pragma target 2.0
 				#pragma multi_compile_shadowcaster
 				#pragma multi_compile_instancing // allow instanced shadow pass for most of the shaders
-				#pragma shader_feature_local ___ _WIND_SHAKE
+				//#pragma shader_feature_local ___ _WIND_SHAKE
+				#pragma shader_feature_local _WIND_NONE _WIND_SIMPLE _WIND_VCOLR _WIND_VCOLG 
 				#include "UnityCG.cginc"
 				
 				#include "Assets/Qc_Rendering/Shaders/Savage_Vegetation.cginc"
@@ -346,12 +365,28 @@ Shader "QcRendering/Geometry/Standard Cutout"
 					UNITY_SETUP_INSTANCE_ID(v);
 					UNITY_TRANSFER_INSTANCE_ID(v, o);
 
+
+					#if !_WIND_NONE
+				//	float topDownShadow = TopDownSample_Shadow(worldPos.xyz);
+						float intensity = 1;
+
+						#if _WIND_VCOLR
+							intensity = v.color.r;
+						#elif _WIND_VCOLG
+							intensity = v.color.g;
+						#endif
+
+						float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+						v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, intensity), v.vertex.w));
+						//worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
+
+					#endif
+
+					/*
 					#if _WIND_SHAKE
 						float4 worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
-					//	float topDownShadow = TopDownSample_Shadow(worldPos.xyz);
 						v.vertex = mul(unity_WorldToObject, float4(WindShakeWorldPos(worldPos.xyz, v.color.r), v.vertex.w));
-						//worldPos = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1));
-					#endif
+					#endif*/
 
 					//UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 					TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
